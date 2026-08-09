@@ -143,6 +143,158 @@ public String chat(String message) {
 }
 ```
 
+### Conversation History
+
+Conversation history is persisted in PostgreSQL. A conversation contains its creation and update timestamps, while each message stores its role, content, timestamp, and associated conversation.
+
+#### 1. Create a conversation
+
+Create a new conversation and copy the returned `id`:
+
+```bash
+curl -i -X POST http://localhost:8080/api/conversations
+```
+
+Example response:
+
+```json
+{
+  "id": "8f3c7b1e-1234-4567-89ab-123456789abc",
+  "createdAt": "2026-08-09T04:30:00Z",
+  "updatedAt": "2026-08-09T04:30:00Z"
+}
+```
+
+Set the conversation ID in a shell variable:
+
+```bash
+CONVERSATION_ID="8f3c7b1e-1234-4567-89ab-123456789abc"
+```
+
+#### 2. Send a message
+
+Send a message to the conversation:
+
+```bash
+curl -i -X POST \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
+  -H "Content-Type: text/plain" \
+  -d "What is Java?"
+```
+
+The application stores the user message, retrieves the existing conversation history, sends the context to the LLM, and stores the assistant's response.
+
+#### 3. Continue the conversation
+
+Send another message using the same conversation ID:
+
+```bash
+curl -i -X POST \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
+  -H "Content-Type: text/plain" \
+  -d "What are its main advantages?"
+```
+
+The second request uses the previous messages as conversation context, allowing the LLM to respond as part of the same conversation.
+
+#### 4. Retrieve conversation history
+
+Retrieve all messages belonging to the conversation:
+
+```bash
+curl -i \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages"
+```
+
+The response contains the messages in chronological order:
+
+```json
+[
+  {
+    "role": "USER",
+    "content": "What is Java?",
+    "createdAt": "2026-08-09T04:30:10Z"
+  },
+  {
+    "role": "ASSISTANT",
+    "content": "Java is a...",
+    "createdAt": "2026-08-09T04:30:12Z"
+  },
+  {
+    "role": "USER",
+    "content": "What are its main advantages?",
+    "createdAt": "2026-08-09T04:31:05Z"
+  },
+  {
+    "role": "ASSISTANT",
+    "content": "The main advantages include...",
+    "createdAt": "2026-08-09T04:31:08Z"
+  }
+]
+```
+
+#### 5. Verify persistence
+
+Because conversations and messages are stored in PostgreSQL, the history remains available after the API request completes.
+
+The conversation-history flow is:
+
+```text
+POST /api/conversations
+        │
+        ▼
+   Conversation
+        │
+        ▼
+POST /api/conversations/{id}/messages
+        │
+        ├── Store USER message
+        │
+        ├── Retrieve conversation history
+        │
+        ├── Send history + new message to LLM
+        │
+        └── Store ASSISTANT message
+        │
+        ▼
+GET /api/conversations/{id}/messages
+        │
+        ▼
+   Conversation history
+```
+
+### Testing the Conversation History
+
+A quick end-to-end test can be performed with:
+
+```bash
+# Create conversation
+curl -X POST http://localhost:8080/api/conversations
+
+# Set the returned UUID
+CONVERSATION_ID="<conversation-uuid>"
+
+# Send first message
+curl -X POST \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
+  -H "Content-Type: text/plain" \
+  -d "What is Java?"
+
+# Send follow-up message
+curl -X POST \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
+  -H "Content-Type: text/plain" \
+  -d "What are its main advantages?"
+
+# Retrieve complete conversation history
+curl \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages"
+```
+
+This verifies the complete persistence flow from conversation creation through multi-turn interaction and history retrieval.
+
+
+
 ## Configuration
 
 The application requires these environment variables (defined in `.env.example`):
