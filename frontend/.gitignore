@@ -1,0 +1,46 @@
+# Dependency directories
+node_modules/
+# Optional: Yarn’s PnP folder (uncomment if you use it)
+# .pnp/
+# Optional: PNPM store (uncomment if you use pnpm)
+# .pnpm-store/
+
+# Build output
+dist/
+# If you ever use `vite preview --outDir` or another custom output
+# build/
+
+# Local IDE / editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~ 
+
+# Environment / secrets
+.env
+.env.local
+.env.*.local
+
+# OS / system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Optional: package lock files (if you deliberately don’t want to commit them)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Optional: caches
+.cache/
+.parcel-cache/
