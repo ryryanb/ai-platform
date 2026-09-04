@@ -154,4 +154,8 @@ public List<Message> getConversationHistory(UUID conversationId) {
             .findByConversationIdOrderByCreatedAt(conversationId);
 }
 
+public List<Conversation> getConversations() {
+    return conversationRepository.findAll();
+}
+
 }

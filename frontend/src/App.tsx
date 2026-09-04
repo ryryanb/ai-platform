@@ -1,16 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Conversation,
-  Message,
-} from './types/chat';
-import { ConversationList } from './components/ConversationList';
 import { ChatWindow } from './components/ChatWindow';
+import { ConversationList } from './components/ConversationList';
 import { chatApi } from './services/chatApi';
+import {
+  Conversation
+} from './types/chat';
+
+
 
 export const App: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+const [error, setError] = useState<string | null>(null);    
 
   // Load conversations on mount
   useEffect(() => {

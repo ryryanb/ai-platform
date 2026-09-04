@@ -69,5 +69,10 @@ public ResponseEntity<Conversation> createConversation() {
         );
     }
 
+    @GetMapping
+public ResponseEntity<List<Conversation>> getConversations() {
+    return ResponseEntity.ok(chatService.getConversations());
+}
+
     
 }

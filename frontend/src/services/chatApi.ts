@@ -1,104 +1,101 @@
-import { Conversation, Message } from '../types/chat';
+import {
+  Conversation,
+  ConversationResponse,
+  Message,
+  MessageRole,
+} from '../types/chat';
 
-// Utility to generate random IDs
-const randomId = () => Math.random().toString(36).substring(2, 9);
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
 
-// Mock data ---------------------------------------------------------
-let mockConversations: Conversation[] = [
-  {
-    id: randomId(),
-    title: 'Demo Conversation',
-    messages: [
-      {
-        id: randomId(),
-        role: 'assistant',
-        content: `## Welcome!
-
-I’m your AI assistant. Feel free to ask anything.
-
-### Example Java code
-
-\`\`\`java
-public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, world!");
-    }
+interface BackendMessage {
+  id: string;
+  role: 'USER' | 'ASSISTANT';
+  content: string;
+  createdAt: string;
 }
-\`\`\`
 
-Enjoy!`,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-  },
-];
+const request = async <T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T> => {
+  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      ...(options?.body
+        ? { 'Content-Type': 'text/plain' }
+        : {}),
+      ...options?.headers,
+    },
+  });
 
-// API ----------------------------------------------------------------
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      errorText || `Request failed with status ${response.status}`,
+    );
+  }
+
+  return response.json();
+};
+
+const normalizeMessage = (
+  message: BackendMessage,
+): Message => ({
+  id: message.id,
+  role: message.role.toLowerCase() as MessageRole,
+  content: message.content,
+  createdAt: message.createdAt,
+});
+
+const toConversation = (
+  conversation: ConversationResponse,
+): Conversation => ({
+  id: conversation.id,
+  title: 'New Conversation',
+  messages: [],
+});
+
 export const chatApi = {
-  /** Get list of conversations */
   getConversations: async (): Promise<Conversation[]> => {
-    // Simulate network latency
-    await new Promise((res) => setTimeout(res, 300));
-    // Return shallow copy
-    return [...mockConversations];
+    const conversations =
+      await request<ConversationResponse[]>('/conversations');
+
+    return conversations.map(toConversation);
   },
 
-  /** Create a new empty conversation */
   createConversation: async (): Promise<Conversation> => {
-    await new Promise((res) => setTimeout(res, 200));
-    const newConv: Conversation = {
-      id: randomId(),
-      title: 'New Conversation',
-      messages: [],
-    };
-    mockConversations = [newConv, ...mockConversations];
-    return newConv;
+    const conversation =
+      await request<ConversationResponse>('/conversations', {
+        method: 'POST',
+      });
+
+    return toConversation(conversation);
   },
 
-  /** Get messages for a conversation */
-  getMessages: async (conversationId: string): Promise<Message[]> => {
-    await new Promise((res) => setTimeout(res, 200));
-    const conv = mockConversations.find((c) => c.id === conversationId);
-    return conv ? [...conv.messages] : [];
+  getMessages: async (
+    conversationId: string,
+  ): Promise<Message[]> => {
+    const messages = await request<BackendMessage[]>(
+      `/conversations/${conversationId}/messages`,
+    );
+
+    return messages.map(normalizeMessage);
   },
 
-  /** Send a user message and receive a mocked assistant reply */
   sendMessage: async (
     conversationId: string,
     userMessage: string,
   ): Promise<Message> => {
-    await new Promise((res) => setTimeout(res, 500)); // pretend processing
+    const message = await request<BackendMessage>(
+      `/conversations/${conversationId}/messages`,
+      {
+        method: 'POST',
+        body: userMessage,
+      },
+    );
 
-    const assistantReply: Message = {
-      id: randomId(),
-      role: 'assistant',
-      content: `You said:
-
-> ${userMessage}
-
-Here is a **sample** response with a code block:
-
-\`\`\`python
-def greet(name):
-    return f"Hello, {name}!"
-\`\`\`
-
-Let me know if you need anything else!`,
-      createdAt: new Date().toISOString(),
-    };
-
-    // Append messages to mock store
-    const convIndex = mockConversations.findIndex((c) => c.id === conversationId);
-    if (convIndex !== -1) {
-      const userMsg: Message = {
-        id: randomId(),
-        role: 'user',
-        content: userMessage,
-        createdAt: new Date().toISOString(),
-      };
-      mockConversations[convIndex].messages.push(userMsg, assistantReply);
-    }
-
-    return assistantReply;
+    return normalizeMessage(message);
   },
 };
