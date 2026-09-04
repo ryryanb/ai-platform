@@ -1,4 +1,4 @@
-import React, { useState, KeyboardEvent } from 'react';
+import React, { KeyboardEvent, useState } from 'react';
 
 interface MessageInputProps {
   onSend: (content: string) => void;
@@ -13,15 +13,21 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed) return;
+
+    if (!trimmed || disabled) {
+      return;
+    }
+
     onSend(trimmed);
     setValue('');
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (!disabled) handleSend();
+  const handleKeyDown = (
+    event: KeyboardEvent<HTMLTextAreaElement>,
+  ) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      handleSend();
     }
   };
 
@@ -29,12 +35,14 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     <div className="message-input">
       <textarea
         rows={1}
-        placeholder="Type a message…"
+        placeholder="Message AI Platform..."
         value={value}
-        onChange={(e) => setValue(e.target.value)}
-        onKeyDown={onKeyDown}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={handleKeyDown}
         disabled={disabled}
+        aria-label="Message"
       />
+
       <button
         type="button"
         onClick={handleSend}

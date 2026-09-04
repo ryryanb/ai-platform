@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { Conversation } from '../types/chat';
 
 interface ConversationListProps {
@@ -16,26 +17,54 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   return (
     <aside className="conversation-list">
-      <header>
+      <header className="conversation-list-header">
         <h2>Conversations</h2>
-        <button onClick={onNew} aria-label="New conversation">
+
+        <button
+          type="button"
+          className="new-conversation-button"
+          onClick={onNew}
+          aria-label="Create a new conversation"
+        >
           + New
         </button>
       </header>
+
       {conversations.length === 0 ? (
-        <p className="empty">No conversations yet.</p>
+        <div className="conversation-empty">
+          <p>No conversations yet.</p>
+
+          <button
+            type="button"
+            onClick={onNew}
+            className="conversation-empty-button"
+          >
+            Start a conversation
+          </button>
+        </div>
       ) : (
-        <ul>
-          {conversations.map((conv) => (
-            <li
-              key={conv.id}
-              className={conv.id === selectedId ? 'active' : ''}
-              onClick={() => onSelect(conv.id)}
+        <nav
+          className="conversation-items"
+          aria-label="Conversation history"
+        >
+          {conversations.map((conversation) => (
+            <button
+              key={conversation.id}
+              type="button"
+              className={`conversation-item ${
+                conversation.id === selectedId ? 'active' : ''
+              }`}
+              onClick={() => onSelect(conversation.id)}
+              aria-current={
+                conversation.id === selectedId ? 'page' : undefined
+              }
             >
-              {conv.title}
-            </li>
+              <span className="conversation-title">
+                {conversation.title}
+              </span>
+            </button>
           ))}
-        </ul>
+        </nav>
       )}
     </aside>
   );

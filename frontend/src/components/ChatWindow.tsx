@@ -1,7 +1,9 @@
 import React from 'react';
+
 import { Conversation } from '../types/chat';
-import { MessageList } from './MessageList';
+
 import { MessageInput } from './MessageInput';
+import { MessageList } from './MessageList';
 
 interface ChatWindowProps {
   conversation: Conversation | null;
@@ -16,21 +18,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   if (!conversation) {
     return (
-      <section className="chat-window empty">
-        <p>Select or create a conversation to start chatting.</p>
-      </section>
+      <main className="chat-window empty" aria-label="Chat">
+        <div className="chat-empty">
+          <h1>AI Platform</h1>
+          <p>Select a conversation or create a new one to get started.</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <section className="chat-window">
+    <main className="chat-window" aria-label="Chat">
       <header className="chat-header">
-        <h2>{conversation.title}</h2>
+        <h1>{conversation.title}</h1>
       </header>
 
-      <MessageList messages={conversation.messages} isLoading={isLoading} />
+      <MessageList
+        messages={conversation.messages}
+        isLoading={isLoading}
+      />
 
-      <MessageInput onSend={onSendMessage} disabled={isLoading} />
-    </section>
+      <MessageInput
+        onSend={onSendMessage}
+        disabled={isLoading}
+      />
+    </main>
   );
 };
