@@ -99,7 +99,7 @@ export const chatApi = {
     return normalizeMessage(message);
   },
 
-  streamMessage: async (
+ streamMessage: async (
   conversationId: string,
   userMessage: string,
   onChunk: (chunk: string) => void,
@@ -110,7 +110,6 @@ export const chatApi = {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain',
-        Accept: 'text/event-stream',
       },
       body: userMessage,
     },
@@ -131,8 +130,6 @@ export const chatApi = {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
 
-  let buffer = '';
-
   while (true) {
     const { value, done } = await reader.read();
 
@@ -140,36 +137,19 @@ export const chatApi = {
       break;
     }
 
-    buffer += decoder.decode(value, { stream: true });
+    const chunk = decoder.decode(value, {
+      stream: true,
+    });
 
-    const events = buffer.split('\n\n');
-    buffer = events.pop() ?? '';
-
-    for (const event of events) {
-      const data = event
-        .split('\n')
-        .filter((line) => line.startsWith('data:'))
-        .map((line) => line.substring(5).trimStart())
-        .join('\n');
-
-      if (data) {
-        onChunk(data);
-      }
+    if (chunk) {
+      onChunk(chunk);
     }
   }
 
-  buffer += decoder.decode();
+  const finalChunk = decoder.decode();
 
-  if (buffer.trim()) {
-    const data = buffer
-      .split('\n')
-      .filter((line) => line.startsWith('data:'))
-      .map((line) => line.substring(5).trimStart())
-      .join('\n');
-
-    if (data) {
-      onChunk(data);
-    }
+  if (finalChunk) {
+    onChunk(finalChunk);
   }
 },
 };

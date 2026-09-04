@@ -76,7 +76,7 @@ public ResponseEntity<List<Conversation>> getConversations() {
 
    @PostMapping(
     value = "/{conversationId}/messages/stream",
-    produces = MediaType.TEXT_EVENT_STREAM_VALUE
+    produces = MediaType.TEXT_PLAIN_VALUE
 )
 public Flux<String> streamMessage(
         @PathVariable UUID conversationId,
@@ -84,5 +84,5 @@ public Flux<String> streamMessage(
 
     return chatService.streamMessage(conversationId, message);
 }
- 
+
 }
