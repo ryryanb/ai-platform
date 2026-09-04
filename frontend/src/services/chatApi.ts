@@ -98,4 +98,78 @@ export const chatApi = {
 
     return normalizeMessage(message);
   },
+
+  streamMessage: async (
+  conversationId: string,
+  userMessage: string,
+  onChunk: (chunk: string) => void,
+): Promise<void> => {
+  const response = await fetch(
+    `${API_BASE_URL}/conversations/${conversationId}/messages/stream`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain',
+        Accept: 'text/event-stream',
+      },
+      body: userMessage,
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+
+    throw new Error(
+      errorText || `Request failed with status ${response.status}`,
+    );
+  }
+
+  if (!response.body) {
+    throw new Error('Streaming response body is unavailable.');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    buffer += decoder.decode(value, { stream: true });
+
+    const events = buffer.split('\n\n');
+    buffer = events.pop() ?? '';
+
+    for (const event of events) {
+      const data = event
+        .split('\n')
+        .filter((line) => line.startsWith('data:'))
+        .map((line) => line.substring(5).trimStart())
+        .join('\n');
+
+      if (data) {
+        onChunk(data);
+      }
+    }
+  }
+
+  buffer += decoder.decode();
+
+  if (buffer.trim()) {
+    const data = buffer
+      .split('\n')
+      .filter((line) => line.startsWith('data:'))
+      .map((line) => line.substring(5).trimStart())
+      .join('\n');
+
+    if (data) {
+      onChunk(data);
+    }
+  }
+},
 };

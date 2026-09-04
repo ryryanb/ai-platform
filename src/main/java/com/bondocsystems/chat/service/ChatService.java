@@ -158,4 +158,60 @@ public List<Conversation> getConversations() {
     return conversationRepository.findAll();
 }
 
+public Flux<String> streamMessage(
+        UUID conversationId,
+        String message) {
+
+    Conversation conversation = conversationRepository
+            .findById(conversationId)
+            .orElseThrow(() ->
+                    new ResourceNotFoundException(
+                            "Conversation not found"));
+
+    Message userMessage = new Message();
+    userMessage.setConversation(conversation);
+    userMessage.setRole(MessageRole.USER);
+    userMessage.setContent(message);
+    userMessage.setCreatedAt(Instant.now());
+
+    messageRepository.save(userMessage);
+
+    List<Message> history =
+            messageRepository
+                    .findByConversationIdOrderByCreatedAt(conversationId);
+
+    List<org.springframework.ai.chat.messages.Message> aiMessages =
+            history.stream()
+                    .map(this::toAiMessage)
+                    .toList();
+
+    Prompt prompt = new Prompt(aiMessages);
+
+    StringBuilder responseBuilder = new StringBuilder();
+
+    return chatClient
+            .prompt(prompt)
+            .stream()
+            .content()
+            .doOnNext(responseBuilder::append)
+            .doOnComplete(() -> saveAssistantMessage(
+                    conversation,
+                    responseBuilder.toString()
+            ));
+}
+
+@Transactional
+public void saveAssistantMessage(
+        Conversation conversation,
+        String content) {
+
+    Message assistantMessage = new Message();
+    assistantMessage.setConversation(conversation);
+    assistantMessage.setRole(MessageRole.ASSISTANT);
+    assistantMessage.setContent(content);
+    assistantMessage.setCreatedAt(Instant.now());
+
+    messageRepository.save(assistantMessage);
+}
+
 }

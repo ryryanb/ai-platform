@@ -3,7 +3,8 @@ import { ChatWindow } from './components/ChatWindow';
 import { ConversationList } from './components/ConversationList';
 import { chatApi } from './services/chatApi';
 import {
-  Conversation
+  Conversation,
+  Message,
 } from './types/chat';
 
 
@@ -44,12 +45,78 @@ const [error, setError] = useState<string | null>(null);
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!selectedId) return;
-    setLoading(true);
-    await chatApi.sendMessage(selectedId, content);
-    await refreshConversation(selectedId);
-    setLoading(false);
+  if (!selectedId) return;
+
+  setLoading(true);
+  setError(null);
+
+  const conversationId = selectedId;
+
+  const userMessage: Message = {
+    id: crypto.randomUUID(),
+    role: 'user',
+    content,
+    createdAt: new Date().toISOString(),
   };
+
+  const assistantMessage: Message = {
+    id: crypto.randomUUID(),
+    role: 'assistant',
+    content: '',
+    createdAt: new Date().toISOString(),
+  };
+
+  setConversations((prev) =>
+    prev.map((conversation) =>
+      conversation.id === conversationId
+        ? {
+            ...conversation,
+            messages: [
+              ...conversation.messages,
+              userMessage,
+              assistantMessage,
+            ],
+          }
+        : conversation,
+    ),
+  );
+
+  try {
+    await chatApi.streamMessage(
+      conversationId,
+      content,
+      (chunk) => {
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === conversationId
+              ? {
+                  ...conversation,
+                  messages: conversation.messages.map((message) =>
+                    message.id === assistantMessage.id
+                      ? {
+                          ...message,
+                          content: message.content + chunk,
+                        }
+                      : message,
+                  ),
+                }
+              : conversation,
+          ),
+        );
+      },
+    );
+
+    await refreshConversation(conversationId);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : 'Failed to generate response.',
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <div className="app-container">
