@@ -1,401 +1,935 @@
+````markdown
 # AI Platform
 
-A production-ready Spring Boot application demonstrating end-to-end integration with LLMs using Ollama for conversational AI. This portfolio project showcases engineering practices for building scalable AI applications with real-world production considerations.
+A full-stack conversational AI application built with Spring Boot, Spring AI, Ollama, PostgreSQL, React, TypeScript, and Vite.
 
-## Overview
+The application provides persistent AI conversations with support for conversation history, Markdown responses, syntax-highlighted code blocks, and progressively streamed AI responses.
 
-This platform implements a conversational AI system that processes natural language queries through an Ollama-based LLM. The application demonstrates:
-- Production-grade Spring Boot architecture
-- Spring AI integration patterns
-- Real-time LLM interactions with streaming responses
-- Persistent conversation history
-- Clean separation of concerns
-- Dockerized infrastructure for local development
+## Current Status
 
-Unlike typical AI demos, this implementation focuses on engineering quality and maintainability rather than flashy features, making it suitable for portfolio projects targeting engineering roles.
+| Feature | Status |
+|---|---|
+| Spring Boot backend | Implemented |
+| PostgreSQL persistence | Implemented |
+| Conversation creation | Implemented |
+| Conversation listing | Implemented |
+| Conversation history | Implemented |
+| Synchronous AI responses | Implemented |
+| Streaming AI responses | Implemented |
+| Ollama integration | Implemented |
+| Spring AI integration | Implemented |
+| React frontend | Implemented |
+| TypeScript frontend | Implemented |
+| Markdown rendering | Implemented |
+| Syntax highlighting | Implemented |
+| Streaming response UI | Implemented |
+| Authentication | Not implemented |
+| RAG | Not implemented |
+| Multi-model selection | Not implemented |
+| Production deployment | Not implemented |
 
-## Features
-
-| Feature | Implementation Status | Description |
-|---------|------------------------|-------------|
-| Conversational AI | Implemented | Processes natural language queries through Ollama |
-| Conversation History | Implemented | Stores and retrieves conversation history with persistent storage |
-| Streaming Responses | Implemented | Real-time response generation with partial responses |
-| Ollama Integration | Implemented | Direct integration with local Ollama server |
-| REST API | Implemented | Production-grade endpoint for chat interactions |
-| Type Safety | Implemented | Comprehensive Java type safety with JPA |
-
-## Technology Stack
-
-| Category | Technology | Version |
-|----------|-------------|---------|
-| **Backend** | Spring Boot | 3.3.0 |
-| **AI Framework** | Spring AI | 0.23.0 |
-| **Database** | PostgreSQL | 15.x |
-| **LLM Provider** | Ollama | 0.1.37 |
-| **Serialization** | Jackson | 2.15.0 |
-| **Build Tool** | Maven | 3.9.0 |
-| **Testing** | JUnit 5 | 5.10.0 |
-| **Configuration** | Spring Cloud Config | 3.3.0 |
+---
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    A[Client] -->|HTTP Request| B(REST API)
-    B --> C[Chat Service]
-    C --> D[Spring AI]
-    D --> E[Ollama Server]
-    C --> F[Conversation Repository]
-    F --> G[PostgreSQL]
-    C --> H[Message Repository]
-    H --> G
-    G --> I[Database]
-```
+```text
+                         ┌──────────────────────┐
+                         │     React Frontend   │
+                         │   React + TypeScript  │
+                         │        + Vite         │
+                         └──────────┬───────────┘
+                                    │
+                             HTTP / Streaming
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │   Spring Boot API    │
+                         │                      │
+                         │  ChatController      │
+                         │        │             │
+                         │  ChatService         │
+                         └──────┬───────┬───────┘
+                                │       │
+                         Spring AI      │ JPA
+                                │       │
+                                ▼       ▼
+                         ┌──────────┐ ┌──────────┐
+                         │  Ollama  │ │PostgreSQL│
+                         │ qwen3:4b │ │          │
+                         └──────────┘ └──────────┘
+````
 
-## Project Structure
+### Request Flow
 
-```bash
-ai-platform/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/bondocsystems/chat/
-│   │   │       ├── config/                # Configuration classes
-│   │   │       ├── controller/            # REST API endpoints
-│   │   │       ├── service/               # Business logic
-│   │   │       ├── model/                 # Entities and enums
-│   │   │       └── repository/            # Data access
-│   │   └── resources/
-│   │       ├── application.yml            # Main config
-│   │       └── static/                    # Static assets
-├── docker-compose.yml                    # Local development infrastructure
-├── .env.example                          # Environment variables
-├── pom.xml                               # Build configuration
-└── README.md                             # Project documentation
-```
-
-## AI Integration
-
-### Spring AI Configuration
-The application uses Spring AI's `ChatClient` configuration to connect with Ollama:
-
-```java
-@Configuration
-public class ChatConfig {
-    @Bean
-    public ChatClient chatClient() {
-        return ChatClient.builder()
-            .llmProvider(new OllamaLLMProvider("ollama"))
-            .build();
-    }
-}
-```
-
-### LLM Provider Implementation
-The system uses Ollama as the primary LLM provider with these capabilities:
-
-| Feature | Implementation |
-|---------|-----------------|
-| Model Selection | `ollama` (default) |
-| Model Loading | On-demand via Ollama API |
-| Prompt Processing | Built-in with Spring AI |
-| Streaming | Implemented via `ChatResponse` |
-
-### How Prompts Work
-1. Client sends message to `/api/chat` endpoint
-2. Controller passes message to `ChatService`
-3. Service converts message to Ollama prompt format
-4. Ollama returns streaming response
-5. Service processes partial responses and stores conversation
-
-### Streaming Implementation
-The application supports real-time streaming responses through Spring AI's `ChatResponse`:
-
-```java
-public String chat(String message) {
-    ChatResponse response = chatClient().chat(
-        new ChatMessage("user", message)
-    );
-    
-    // Stream responses as they arrive
-    return response.getStreamingContent();
-}
-```
-
-## API
-
-| Method | URL | Parameters | Response Format | Example Request |
-|--------|-----|-------------|------------------|-----------------|
-| POST | `/api/chat` | `message` (string) | JSON with `response` | `{"message": "Hello"}` |
-
-**Request Example:**
-```json
-{
-  "message": "What's the weather today?"
-}
-```
-
-**Response Example:**
-```json
-{
-  "response": "It's currently 23°C with light rain. You might want to carry an umbrella."
-}
-```
-
-### Conversation History
-
-Conversation history is persisted in PostgreSQL. A conversation contains its creation and update timestamps, while each message stores its role, content, timestamp, and associated conversation.
-
-#### 1. Create a conversation
-
-Create a new conversation and copy the returned `id`:
-
-```bash
-curl -i -X POST http://localhost:8080/api/conversations
-```
-
-Example response:
-
-```json
-{
-  "id": "8f3c7b1e-1234-4567-89ab-123456789abc",
-  "createdAt": "2026-08-09T04:30:00Z",
-  "updatedAt": "2026-08-09T04:30:00Z"
-}
-```
-
-Set the conversation ID in a shell variable:
-
-```bash
-CONVERSATION_ID="8f3c7b1e-1234-4567-89ab-123456789abc"
-```
-
-#### 2. Send a message
-
-Send a message to the conversation:
-
-```bash
-curl -i -X POST \
-  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
-  -H "Content-Type: text/plain" \
-  -d "What is Java?"
-```
-
-The application stores the user message, retrieves the existing conversation history, sends the context to the LLM, and stores the assistant's response.
-
-#### 3. Continue the conversation
-
-Send another message using the same conversation ID:
-
-```bash
-curl -i -X POST \
-  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
-  -H "Content-Type: text/plain" \
-  -d "What are its main advantages?"
-```
-
-The second request uses the previous messages as conversation context, allowing the LLM to respond as part of the same conversation.
-
-#### 4. Retrieve conversation history
-
-Retrieve all messages belonging to the conversation:
-
-```bash
-curl -i \
-  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages"
-```
-
-The response contains the messages in chronological order:
-
-```json
-[
-  {
-    "role": "USER",
-    "content": "What is Java?",
-    "createdAt": "2026-08-09T04:30:10Z"
-  },
-  {
-    "role": "ASSISTANT",
-    "content": "Java is a...",
-    "createdAt": "2026-08-09T04:30:12Z"
-  },
-  {
-    "role": "USER",
-    "content": "What are its main advantages?",
-    "createdAt": "2026-08-09T04:31:05Z"
-  },
-  {
-    "role": "ASSISTANT",
-    "content": "The main advantages include...",
-    "createdAt": "2026-08-09T04:31:08Z"
-  }
-]
-```
-
-#### 5. Verify persistence
-
-Because conversations and messages are stored in PostgreSQL, the history remains available after the API request completes.
-
-The conversation-history flow is:
+For a normal message:
 
 ```text
-POST /api/conversations
-        │
-        ▼
-   Conversation
-        │
-        ▼
-POST /api/conversations/{id}/messages
-        │
-        ├── Store USER message
-        │
-        ├── Retrieve conversation history
-        │
-        ├── Send history + new message to LLM
-        │
-        └── Store ASSISTANT message
-        │
-        ▼
-GET /api/conversations/{id}/messages
-        │
-        ▼
-   Conversation history
+React
+  │
+  │ POST /api/conversations/{id}/messages
+  ▼
+Spring Boot
+  │
+  ├── Save USER message
+  │
+  ├── Load conversation history
+  │
+  ├── Build Spring AI Prompt
+  │
+  ├── Send prompt to Ollama
+  │
+  ├── Receive AI response
+  │
+  └── Save ASSISTANT message
+  │
+  ▼
+React
 ```
 
-### Testing the Conversation History
+For a streaming response:
 
-A quick end-to-end test can be performed with:
+```text
+React
+  │
+  │ POST /api/conversations/{id}/messages/stream
+  ▼
+Spring Boot
+  │
+  ├── Save USER message
+  │
+  ├── Load conversation history
+  │
+  └── Stream response from Ollama
+          │
+          ▼
+      Spring AI Flux
+          │
+          ▼
+      HTTP streaming
+          │
+          ▼
+        React
+          │
+          ├── Receive chunks
+          ├── Accumulate response
+          └── Render progressively
+```
+
+---
+
+# Technology Stack
+
+## Backend
+
+| Technology      | Version / Role      |
+| --------------- | ------------------- |
+| Java            | 21                  |
+| Spring Boot     | 4.1.0               |
+| Spring AI       | 2.0.0               |
+| Spring Web MVC  | REST API            |
+| Spring WebFlux  | Reactive streaming  |
+| Spring Data JPA | Persistence         |
+| Flyway          | Database migrations |
+| PostgreSQL      | Database            |
+| Maven           | Build               |
+| Ollama          | Local LLM runtime   |
+| qwen3:4b        | Current LLM model   |
+
+## Frontend
+
+| Technology               | Role                         |
+| ------------------------ | ---------------------------- |
+| React                    | UI                           |
+| TypeScript               | Type safety                  |
+| Vite                     | Development server and build |
+| react-markdown           | Markdown rendering           |
+| react-syntax-highlighter | Code highlighting            |
+| Fetch API                | Backend communication        |
+
+## Infrastructure
+
+| Technology | Role                        |
+| ---------- | --------------------------- |
+| Docker     | PostgreSQL container        |
+| PostgreSQL | Persistent application data |
+| Ollama     | Local LLM inference         |
+
+---
+
+# Project Structure
+
+```text
+ai-platform/
+│
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/bondocsystems/chat/
+│       │       ├── config/
+│       │       ├── controller/
+│       │       ├── exception/
+│       │       ├── model/
+│       │       ├── repository/
+│       │       └── service/
+│       │
+│       └── resources/
+│           ├── application.yml
+│           └── db/
+│               └── migration/
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── types/
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── compose.yaml
+├── pom.xml
+├── mvnw
+├── mvnw.cmd
+└── README.md
+```
+
+---
+
+# Prerequisites
+
+Install the following:
+
+* Java 21 JDK
+* Maven 3.9+ (optional when using the Maven Wrapper)
+* Docker Desktop
+* Node.js
+* npm
+* Ollama
+
+Verify Java:
 
 ```bash
-# Create conversation
-curl -X POST http://localhost:8080/api/conversations
+java -version
+```
 
-# Set the returned UUID
-CONVERSATION_ID="<conversation-uuid>"
+Verify Docker:
 
-# Send first message
+```bash
+docker --version
+docker compose version
+```
+
+Verify Node.js:
+
+```bash
+node --version
+npm --version
+```
+
+Verify Ollama:
+
+```bash
+ollama --version
+```
+
+---
+
+# Running Locally
+
+The application runs locally as three separate processes:
+
+```text
+1. PostgreSQL
+       ↓
+2. Spring Boot backend
+       ↓
+3. React frontend
+```
+
+Ollama also needs to be running locally.
+
+The recommended setup is:
+
+```text
+PostgreSQL    → Docker
+Spring Boot   → Host machine
+React/Vite    → Host machine
+Ollama        → Host machine
+```
+
+---
+
+# 1. Start PostgreSQL
+
+From the repository root:
+
+```bash
+docker compose up -d postgres
+```
+
+Verify that PostgreSQL is running:
+
+```bash
+docker compose ps
+```
+
+You can also check:
+
+```bash
+docker ps
+```
+
+The application expects PostgreSQL to be available at:
+
+```text
+Host:     localhost
+Port:     5432
+Database: chat_db
+Username: postgres
+Password: password
+```
+
+The datasource configuration is defined in:
+
+```text
+src/main/resources/application.yml
+```
+
+Flyway automatically applies database migrations when the Spring Boot application starts.
+
+---
+
+# 2. Start Ollama
+
+The application currently uses:
+
+```text
+qwen3:4b
+```
+
+Make sure Ollama is running.
+
+Verify installed models:
+
+```bash
+ollama list
+```
+
+If the model is not installed:
+
+```bash
+ollama pull qwen3:4b
+```
+
+You can verify the model directly:
+
+```bash
+ollama run qwen3:4b
+```
+
+Exit with:
+
+```text
+/bye
+```
+
+The Spring Boot application connects to Ollama at:
+
+```text
+http://localhost:11434
+```
+
+---
+
+# 3. Start the Spring Boot Backend
+
+Open a new terminal and navigate to the repository root.
+
+Using the Maven Wrapper:
+
+```bash
+./mvnw spring-boot:run
+```
+
+On Windows:
+
+```bash
+mvnw.cmd spring-boot:run
+```
+
+Alternatively, with Maven installed globally:
+
+```bash
+mvn spring-boot:run
+```
+
+The backend starts at:
+
+```text
+http://localhost:8080
+```
+
+On startup, Spring Boot will:
+
+1. Connect to PostgreSQL
+2. Run Flyway migrations
+3. Initialize the application
+4. Connect to Ollama when AI requests are made
+
+---
+
+# 4. Start the React Frontend
+
+Open another terminal.
+
+From the repository root:
+
+```bash
+cd frontend
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the Vite development server:
+
+```bash
+npm run dev
+```
+
+Vite will display a local URL similar to:
+
+```text
+http://localhost:5173/
+```
+
+Open that URL in your browser.
+
+---
+
+# Complete Startup Sequence
+
+Use four terminals during development.
+
+### Terminal 1 — PostgreSQL
+
+```bash
+docker compose up -d postgres
+```
+
+### Terminal 2 — Ollama
+
+Make sure Ollama is running and `qwen3:4b` is available:
+
+```bash
+ollama list
+```
+
+### Terminal 3 — Spring Boot
+
+```bash
+./mvnw spring-boot:run
+```
+
+Backend:
+
+```text
+http://localhost:8080
+```
+
+### Terminal 4 — React
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend:
+
+```text
+http://localhost:5173
+```
+
+Then open the frontend URL in a browser.
+
+---
+
+# API
+
+The primary API is organized around conversations.
+
+Base path:
+
+```text
+/api/conversations
+```
+
+## Create a Conversation
+
+```bash
+curl -X POST \
+  http://localhost:8080/api/conversations
+```
+
+The response contains a conversation UUID.
+
+Example:
+
+```json
+{
+  "id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "createdAt": "2026-09-05T00:00:00Z",
+  "updatedAt": "2026-09-05T00:00:00Z"
+}
+```
+
+Set the ID for subsequent requests:
+
+```bash
+CONVERSATION_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+```
+
+---
+
+## Send a Message
+
+```bash
 curl -X POST \
   "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
   -H "Content-Type: text/plain" \
-  -d "What is Java?"
+  -d "What is Spring Boot?"
+```
 
-# Send follow-up message
-curl -X POST \
-  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages" \
-  -H "Content-Type: text/plain" \
-  -d "What are its main advantages?"
+The backend:
 
-# Retrieve complete conversation history
+1. Validates the conversation
+2. Saves the user message
+3. Loads previous messages
+4. Converts the conversation history into Spring AI messages
+5. Sends the prompt to Ollama
+6. Receives the AI response
+7. Saves the assistant response
+
+---
+
+## Retrieve Conversation Messages
+
+```bash
 curl \
   "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages"
 ```
 
-This verifies the complete persistence flow from conversation creation through multi-turn interaction and history retrieval.
+Messages are returned in chronological order.
 
+---
 
+## List Conversations
 
-## Configuration
+```bash
+curl \
+  http://localhost:8080/api/conversations
+```
 
-The application requires these environment variables (defined in `.env.example`):
+---
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| OLLAMA_HOST | `http://localhost:11434` | Ollama server URL |
-| POSTGRES_URL | `jdbc:postgresql://localhost:5432/chat_db` | PostgreSQL connection |
-| SPRING_PROFILES_ACTIVE | `dev` | Active profile |
+# Streaming API
 
-## Running Locally
+The application supports progressive AI response generation.
 
-### Prerequisites
-- Java 17+ (JDK)
-- Maven 3.9+
-- Docker
-- Ollama (for LLM)
+Endpoint:
 
-### Setup Steps
-1. Start Ollama locally:
-   ```bash
-   docker run -d -p 11434:11434 --name ollama ollama/ollama
-   ```
+```text
+POST /api/conversations/{conversationId}/messages/stream
+```
 
-2. Start PostgreSQL:
-   ```bash
-   docker-compose up -d
-   ```
+Example:
 
-3. Run the application:
-   ```bash
-   mvn spring-boot:run
-   ```
+```bash
+curl -N -X POST \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages/stream" \
+  -H "Content-Type: text/plain" \
+  -H "Accept: text/event-stream" \
+  -d "Explain Java virtual threads in detail."
+```
 
-4. Test the API:
-   ```bash
-   curl -X POST http://localhost:8080/api/chat -H "Content-Type: application/json" -d '{"message": "Hello"}'
-   ```
+The `-N` option prevents `curl` from buffering the response so streamed content can be displayed progressively.
 
-## Testing
+The backend uses Spring AI's reactive streaming API and accumulates the generated response before persisting the completed assistant message.
 
-The project includes comprehensive JUnit 5 tests for:
-- Conversation history persistence
-- Ollama API integration
-- Streaming response handling
-- Basic error scenarios
+---
 
-To run tests:
+# Frontend Streaming
+
+The React frontend consumes the streaming endpoint using the browser Fetch API.
+
+The response is progressively accumulated into the current assistant message.
+
+```text
+Ollama
+   │
+   ▼
+Spring AI
+   │
+   ▼
+Spring Boot
+   │
+   │ streaming chunks
+   ▼
+Fetch API
+   │
+   ▼
+React state
+   │
+   ▼
+Assistant message
+   │
+   ▼
+MarkdownRenderer
+```
+
+This allows the response to appear while the model is still generating it.
+
+---
+
+# Markdown Rendering
+
+Assistant responses are rendered as Markdown.
+
+Supported content includes:
+
+* Headings
+* Paragraphs
+* Bold text
+* Italic text
+* Ordered lists
+* Unordered lists
+* Blockquotes
+* Inline code
+* Fenced code blocks
+
+Code blocks are syntax highlighted using `react-syntax-highlighter`.
+
+For example:
+
+````markdown
+## Example
+
+Here is a Java example:
+
+```java
+public class Example {
+    public static void main(String[] args) {
+        System.out.println("Hello");
+    }
+}
+```
+````
+
+---
+
+# Frontend Configuration
+
+The frontend uses:
+
+```text
+VITE_API_BASE_URL
+```
+
+to determine the backend URL.
+
+For local development:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+If necessary, create:
+
+```text
+frontend/.env
+```
+
+with:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+Restart the Vite development server after changing environment variables.
+
+Do not commit local `.env` files containing secrets.
+
+---
+
+# Testing
+
+Run the backend test suite from the repository root:
+
+```bash
+./mvnw test
+```
+
+or:
+
 ```bash
 mvn test
 ```
 
-## Design Decisions
+Build the frontend:
 
-### Spring Boot Configuration
-- Used `@SpringBootApplication` for minimal boilerplate
-- Configured profiles for development vs production
-- Implemented proper dependency injection
+```bash
+cd frontend
+npm run build
+```
 
-### Spring AI Integration
-- Chose Ollama over OpenAI for local development
-- Used Spring AI's built-in streaming capabilities
-- Implemented custom prompt templates for better LLM interaction
+---
 
-### LLM Integration Patterns
-- Separated LLM interactions from business logic
-- Used Ollama as a local LLM provider (no cloud costs)
-- Implemented streaming response handling without complex state management
+# Stopping the Application
 
-### Persistence Strategy
-- Used JPA for conversation history
-- Implemented efficient querying with PostgreSQL
-- Added proper nullability constraints for timestamps
+Stop the React development server:
 
-## Current Status
+```text
+Ctrl+C
+```
 
-| Status | Features |
-|--------|----------|
-| **Implemented** | Conversation history, Ollama integration, streaming responses, REST API |
-| **In Progress** | Advanced prompt engineering, model versioning |
-| **Planned** | Multi-LLM support, rate limiting, production monitoring |
+Stop the Spring Boot application:
 
-## Learning / Engineering Reflection
+```text
+Ctrl+C
+```
 
-This project demonstrates critical engineering principles for real-world AI applications:
-1. **Production-grade AI integration**: Using Ollama provides local LLM access without cloud costs while maintaining engineering quality
-2. **Streaming implementation**: Proper handling of real-time responses without blocking the main thread
-3. **Testable architecture**: Separation of concerns allows focused testing of individual components
-4. **Infrastructure as code**: Dockerized setup enables consistent local development environments
-5. **Type safety**: Comprehensive Java type definitions prevent runtime errors in AI interactions
+Stop PostgreSQL:
 
-The implementation prioritizes maintainability and engineering quality over feature bloat, showing how to build AI applications that scale without compromising on technical debt.
+```bash
+docker compose down
+```
 
-## Future Improvements
+To stop PostgreSQL without removing the container:
 
-1. [ ] Add model versioning for LLMs
-2. [ ] Implement rate limiting for API endpoints
-3. [ ] Add production monitoring with Prometheus
-4. [ ] Create model evaluation metrics
-5. [ ] Implement conversation state persistence
+```bash
+docker compose stop postgres
+```
 
-## License
+Start it again with:
 
-MIT License - See [LICENSE](LICENSE) for details
+```bash
+docker compose start postgres
+```
+
+---
+
+# Database Persistence
+
+PostgreSQL stores:
+
+* Conversations
+* User messages
+* Assistant messages
+* Conversation timestamps
+
+Spring Data JPA handles persistence and Flyway manages database migrations.
+
+Stopping or restarting the Spring Boot application does not remove stored conversations.
+
+Running:
+
+```bash
+docker compose down
+```
+
+stops and removes the PostgreSQL container. If persistent Docker volumes are configured, database data remains available when the container is recreated.
+
+---
+
+# Troubleshooting
+
+## PostgreSQL Connection Refused
+
+Check the container:
+
+```bash
+docker compose ps
+```
+
+Check whether port 5432 is being used:
+
+```bash
+lsof -i :5432
+```
+
+The backend expects PostgreSQL at:
+
+```text
+localhost:5432
+```
+
+---
+
+## Database Does Not Exist
+
+The application expects:
+
+```text
+chat_db
+```
+
+Verify that the PostgreSQL container is configured with the same database name used by:
+
+```text
+src/main/resources/application.yml
+```
+
+---
+
+## Ollama Connection Error
+
+Check Ollama:
+
+```bash
+curl http://localhost:11434/api/tags
+```
+
+Then check installed models:
+
+```bash
+ollama list
+```
+
+Make sure:
+
+```text
+qwen3:4b
+```
+
+is available.
+
+---
+
+## Frontend Cannot Connect to Backend
+
+Verify that Spring Boot is running:
+
+```bash
+curl http://localhost:8080/actuator/health
+```
+
+Then check:
+
+```text
+frontend/.env
+```
+
+for:
+
+```text
+VITE_API_BASE_URL=http://localhost:8080
+```
+
+Restart Vite after changing the environment configuration.
+
+---
+
+## Streaming Does Not Appear Progressively
+
+First test the backend directly with `curl`:
+
+```bash
+curl -N -X POST \
+  "http://localhost:8080/api/conversations/$CONVERSATION_ID/messages/stream" \
+  -H "Content-Type: text/plain" \
+  -H "Accept: text/event-stream" \
+  -d "Give me a long explanation of Java."
+```
+
+If the response streams correctly through `curl`, the backend and Ollama streaming pipeline are working. The issue is then likely in the frontend streaming client or UI rendering.
+
+---
+
+# Application Design
+
+The application separates the user interface, API layer, AI integration, and persistence layer.
+
+## Backend
+
+The Spring Boot backend is responsible for:
+
+* Conversation management
+* Message persistence
+* Conversation history
+* AI prompt construction
+* Ollama integration
+* Synchronous AI responses
+* Streaming AI responses
+* Database access
+* Database migrations
+
+## AI Integration
+
+Spring AI provides the integration layer between the application and Ollama.
+
+The current model configuration is:
+
+```text
+Ollama
+└── qwen3:4b
+```
+
+Conversation history is loaded from PostgreSQL and converted into Spring AI messages before being sent to the model.
+
+## Frontend
+
+The React frontend provides:
+
+* Conversation selection
+* New conversation creation
+* Message composition
+* AI response rendering
+* Markdown rendering
+* Syntax highlighting
+* Streaming response display
+
+## Persistence
+
+PostgreSQL stores conversations and messages.
+
+Flyway manages database schema migrations.
+
+## Streaming
+
+AI responses can be generated incrementally using Spring AI's reactive streaming API.
+
+The backend exposes the generated content as a streaming HTTP response, which the React frontend consumes progressively.
+
+---
+
+# Roadmap
+
+Potential future improvements include:
+
+* Authentication and authorization
+* Conversation rename/delete
+* Message regeneration
+* Stop/cancel streaming
+* Multi-model selection
+* Model configuration
+* Retrieval-Augmented Generation (RAG)
+* Tool/function calling
+* AI agents
+* Observability
+* Rate limiting
+* Automated frontend tests
+* Backend integration tests
+* Production Docker image
+* CI/CD
+* Production deployment
+
+Features will be introduced incrementally as the application evolves.
+
+```
+```
