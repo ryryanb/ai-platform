@@ -561,6 +561,39 @@ dist/
 
 The committed `package-lock.json` should remain in the repository so that CI and other developers can reproduce the frontend dependency installation.
 
+# Continuous Integration
+
+The project uses GitHub Actions to automatically build and test the application.
+
+The CI pipeline runs on:
+
+- Pushes to `main`
+- Pushes to `development`
+- Pull requests targeting `main`
+- Pull requests targeting `development`
+
+## CI Pipeline
+
+The pipeline validates both the backend and frontend.
+
+```text
+GitHub Actions
+      │
+      ├── Java 21
+      │
+      ├── PostgreSQL
+      │
+      ├── Maven
+      │     └── ./mvnw verify
+      │           ├── Compile
+      │           ├── Tests
+      │           └── Package
+      │
+      └── Node.js 20
+            └── npm ci
+                  └── npm run validate
+```
+
 ## Engineering Goals
 
 The frontend is designed to demonstrate:
