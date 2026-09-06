@@ -1,0 +1,2 @@
+ALTER TABLE conversations
+ADD COLUMN title VARCHAR(100);

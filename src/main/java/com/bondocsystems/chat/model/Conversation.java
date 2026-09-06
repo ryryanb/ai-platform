@@ -17,8 +17,9 @@ public class Conversation {
     @GeneratedValue
     private UUID id;
 
+    private String title;
+
     private Instant createdAt;
     private Instant updatedAt;
 
-    // Constructors, getters, setters
 }

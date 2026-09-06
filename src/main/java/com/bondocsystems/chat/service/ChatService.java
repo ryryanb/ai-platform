@@ -214,4 +214,18 @@ public void saveAssistantMessage(
     messageRepository.save(assistantMessage);
 }
 
+private static final int CONVERSATION_TITLE_MAX_LENGTH = 60;
+
+private String generateConversationTitle(String message) {
+    String title = message
+        .replaceAll("\\s+", " ")
+        .trim();
+
+    if (title.length() <= CONVERSATION_TITLE_MAX_LENGTH) {
+        return title;
+    }
+
+    return title.substring(0, CONVERSATION_TITLE_MAX_LENGTH - 3).trim() + "...";
+}
+
 }
