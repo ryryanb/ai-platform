@@ -1,4 +1,3 @@
-````markdown
 # Prerequisites
 
 Install the following:
@@ -933,5 +932,3 @@ Potential future improvements include:
 
 Features will be introduced incrementally as the application evolves.
 
-```
-```
