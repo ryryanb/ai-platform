@@ -19,14 +19,13 @@ const [error, setError] = useState<string | null>(null);
   useEffect(() => {
   const load = async () => {
     try {
-      setError(null);
-
       const data = await chatApi.getConversations();
 
       setConversations(data);
 
       if (data.length > 0) {
         setSelectedId(data[0].id);
+        await loadConversation(data[0].id);
       }
     } catch (err) {
       setError(
@@ -42,6 +41,18 @@ const [error, setError] = useState<string | null>(null);
 
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
 
+  const loadConversation = async (id: string) => {
+  const messages = await chatApi.getMessages(id);
+
+  setConversations((prev) =>
+    prev.map((conversation) =>
+      conversation.id === id
+        ? { ...conversation, messages }
+        : conversation,
+    ),
+  );
+};
+
   const refreshConversation = async (id: string) => {
     const msgs = await chatApi.getMessages(id);
     setConversations((prev) =>
@@ -49,9 +60,19 @@ const [error, setError] = useState<string | null>(null);
     );
   };
 
-  const handleSelect = (id: string) => {
-    setSelectedId(id);
-  };
+  const handleSelect = async (id: string) => {
+  setSelectedId(id);
+
+  try {
+    await loadConversation(id);
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : 'Failed to load conversation.',
+    );
+  }
+};
 
   const handleNewConversation = async () => {
   try {
