@@ -54,10 +54,21 @@ const [error, setError] = useState<string | null>(null);
   };
 
   const handleNewConversation = async () => {
+  try {
+    setError(null);
+
     const newConv = await chatApi.createConversation();
+
     setConversations((prev) => [newConv, ...prev]);
     setSelectedId(newConv.id);
-  };
+  } catch (err) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : 'Failed to create conversation.',
+    );
+  }
+};
 
   const handleSendMessage = async (content: string) => {
   if (!selectedId) return;
