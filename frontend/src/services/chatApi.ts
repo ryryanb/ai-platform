@@ -53,7 +53,7 @@ const toConversation = (
   conversation: ConversationResponse,
 ): Conversation => ({
   id: conversation.id,
-  title: 'New Conversation',
+  title: conversation.title ?? 'New Conversation',
   messages: [],
 });
 

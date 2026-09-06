@@ -95,6 +95,12 @@ public com.bondocsystems.chat.model.Message sendMessage(
 
     messageRepository.save(userMessage);
 
+    if (conversation.getTitle() == null) {
+    conversation.setTitle(generateConversationTitle(message));
+    conversation.setUpdatedAt(Instant.now());
+    conversationRepository.save(conversation);
+}
+
     // Retrieve the conversation history
     List<com.bondocsystems.chat.model.Message> history =
             messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
@@ -176,6 +182,13 @@ public Flux<String> streamMessage(
 
     messageRepository.save(userMessage);
 
+    if (conversation.getTitle() == null) {
+    conversation.setTitle(generateConversationTitle(message));
+    conversation.setUpdatedAt(Instant.now());
+    conversationRepository.save(conversation);
+}
+
+
     List<Message> history =
             messageRepository
                     .findByConversationIdOrderByCreatedAt(conversationId);
@@ -194,10 +207,16 @@ public Flux<String> streamMessage(
             .stream()
             .content()
             .doOnNext(responseBuilder::append)
-            .doOnComplete(() -> saveAssistantMessage(
-                    conversation,
-                    responseBuilder.toString()
-            ));
+.doOnComplete(() ->
+    saveAssistantMessage(conversation, responseBuilder.toString())
+)
+.doOnError(error ->
+    log.error(
+        "AI response streaming failed for conversation {}",
+        conversationId,
+        error
+    )
+);
 }
 
 @Transactional
@@ -225,7 +244,15 @@ private String generateConversationTitle(String message) {
         return title;
     }
 
-    return title.substring(0, CONVERSATION_TITLE_MAX_LENGTH - 3).trim() + "...";
+    String truncated = title.substring(0, CONVERSATION_TITLE_MAX_LENGTH - 3);
+
+    int lastSpace = truncated.lastIndexOf(' ');
+
+    if (lastSpace > 0) {
+        truncated = truncated.substring(0, lastSpace);
+    }
+
+    return truncated + "...";
 }
 
 }
