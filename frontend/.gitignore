@@ -44,3 +44,7 @@ pnpm-debug.log*
 # Optional: caches
 .cache/
 .parcel-cache/
+
+.env
+.env.local
+.env.*.local

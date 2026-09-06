@@ -15,6 +15,7 @@ export interface Conversation {
 
 export interface ConversationResponse {
   id: string;
+  title: string | null;
   createdAt: string;
   updatedAt: string;
 }
