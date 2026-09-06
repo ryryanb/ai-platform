@@ -1,202 +1,4 @@
 ````markdown
-# AI Platform
-
-A full-stack conversational AI application built with Spring Boot, Spring AI, Ollama, PostgreSQL, React, TypeScript, and Vite.
-
-The application provides persistent AI conversations with support for conversation history, Markdown responses, syntax-highlighted code blocks, and progressively streamed AI responses.
-
-## Current Status
-
-| Feature | Status |
-|---|---|
-| Spring Boot backend | Implemented |
-| PostgreSQL persistence | Implemented |
-| Conversation creation | Implemented |
-| Conversation listing | Implemented |
-| Conversation history | Implemented |
-| Synchronous AI responses | Implemented |
-| Streaming AI responses | Implemented |
-| Ollama integration | Implemented |
-| Spring AI integration | Implemented |
-| React frontend | Implemented |
-| TypeScript frontend | Implemented |
-| Markdown rendering | Implemented |
-| Syntax highlighting | Implemented |
-| Streaming response UI | Implemented |
-| Authentication | Not implemented |
-| RAG | Not implemented |
-| Multi-model selection | Not implemented |
-| Production deployment | Not implemented |
-
----
-
-## Architecture
-
-```text
-                         ┌──────────────────────┐
-                         │     React Frontend   │
-                         │   React + TypeScript  │
-                         │        + Vite         │
-                         └──────────┬───────────┘
-                                    │
-                             HTTP / Streaming
-                                    │
-                                    ▼
-                         ┌──────────────────────┐
-                         │   Spring Boot API    │
-                         │                      │
-                         │  ChatController      │
-                         │        │             │
-                         │  ChatService         │
-                         └──────┬───────┬───────┘
-                                │       │
-                         Spring AI      │ JPA
-                                │       │
-                                ▼       ▼
-                         ┌──────────┐ ┌──────────┐
-                         │  Ollama  │ │PostgreSQL│
-                         │ qwen3:4b │ │          │
-                         └──────────┘ └──────────┘
-````
-
-### Request Flow
-
-For a normal message:
-
-```text
-React
-  │
-  │ POST /api/conversations/{id}/messages
-  ▼
-Spring Boot
-  │
-  ├── Save USER message
-  │
-  ├── Load conversation history
-  │
-  ├── Build Spring AI Prompt
-  │
-  ├── Send prompt to Ollama
-  │
-  ├── Receive AI response
-  │
-  └── Save ASSISTANT message
-  │
-  ▼
-React
-```
-
-For a streaming response:
-
-```text
-React
-  │
-  │ POST /api/conversations/{id}/messages/stream
-  ▼
-Spring Boot
-  │
-  ├── Save USER message
-  │
-  ├── Load conversation history
-  │
-  └── Stream response from Ollama
-          │
-          ▼
-      Spring AI Flux
-          │
-          ▼
-      HTTP streaming
-          │
-          ▼
-        React
-          │
-          ├── Receive chunks
-          ├── Accumulate response
-          └── Render progressively
-```
-
----
-
-# Technology Stack
-
-## Backend
-
-| Technology      | Version / Role      |
-| --------------- | ------------------- |
-| Java            | 21                  |
-| Spring Boot     | 4.1.0               |
-| Spring AI       | 2.0.0               |
-| Spring Web MVC  | REST API            |
-| Spring WebFlux  | Reactive streaming  |
-| Spring Data JPA | Persistence         |
-| Flyway          | Database migrations |
-| PostgreSQL      | Database            |
-| Maven           | Build               |
-| Ollama          | Local LLM runtime   |
-| qwen3:4b        | Current LLM model   |
-
-## Frontend
-
-| Technology               | Role                         |
-| ------------------------ | ---------------------------- |
-| React                    | UI                           |
-| TypeScript               | Type safety                  |
-| Vite                     | Development server and build |
-| react-markdown           | Markdown rendering           |
-| react-syntax-highlighter | Code highlighting            |
-| Fetch API                | Backend communication        |
-
-## Infrastructure
-
-| Technology | Role                        |
-| ---------- | --------------------------- |
-| Docker     | PostgreSQL container        |
-| PostgreSQL | Persistent application data |
-| Ollama     | Local LLM inference         |
-
----
-
-# Project Structure
-
-```text
-ai-platform/
-│
-├── src/
-│   └── main/
-│       ├── java/
-│       │   └── com/bondocsystems/chat/
-│       │       ├── config/
-│       │       ├── controller/
-│       │       ├── exception/
-│       │       ├── model/
-│       │       ├── repository/
-│       │       └── service/
-│       │
-│       └── resources/
-│           ├── application.yml
-│           └── db/
-│               └── migration/
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── services/
-│   │   ├── types/
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-│
-├── compose.yaml
-├── pom.xml
-├── mvnw
-├── mvnw.cmd
-└── README.md
-```
-
----
-
 # Prerequisites
 
 Install the following:
@@ -666,6 +468,206 @@ Restart the Vite development server after changing environment variables.
 Do not commit local `.env` files containing secrets.
 
 ---
+
+# AI Platform
+
+A full-stack conversational AI application built with Spring Boot, Spring AI, Ollama, PostgreSQL, React, TypeScript, and Vite.
+
+The application provides persistent AI conversations with support for conversation history, Markdown responses, syntax-highlighted code blocks, and progressively streamed AI responses.
+
+## Current Status
+
+| Feature | Status |
+|---|---|
+| Spring Boot backend | Implemented |
+| PostgreSQL persistence | Implemented |
+| Conversation creation | Implemented |
+| Conversation listing | Implemented |
+| Conversation history | Implemented |
+| Synchronous AI responses | Implemented |
+| Streaming AI responses | Implemented |
+| Ollama integration | Implemented |
+| Spring AI integration | Implemented |
+| React frontend | Implemented |
+| TypeScript frontend | Implemented |
+| Markdown rendering | Implemented |
+| Syntax highlighting | Implemented |
+| Streaming response UI | Implemented |
+| Authentication | Not implemented |
+| RAG | Not implemented |
+| Multi-model selection | Not implemented |
+| Production deployment | Not implemented |
+
+---
+
+## Architecture
+
+```text
+                         ┌──────────────────────┐
+                         │     React Frontend   │
+                         │   React + TypeScript  │
+                         │        + Vite         │
+                         └──────────┬───────────┘
+                                    │
+                             HTTP / Streaming
+                                    │
+                                    ▼
+                         ┌──────────────────────┐
+                         │   Spring Boot API    │
+                         │                      │
+                         │  ChatController      │
+                         │        │             │
+                         │  ChatService         │
+                         └──────┬───────┬───────┘
+                                │       │
+                         Spring AI      │ JPA
+                                │       │
+                                ▼       ▼
+                         ┌──────────┐ ┌──────────┐
+                         │  Ollama  │ │PostgreSQL│
+                         │ qwen3:4b │ │          │
+                         └──────────┘ └──────────┘
+````
+
+### Request Flow
+
+For a normal message:
+
+```text
+React
+  │
+  │ POST /api/conversations/{id}/messages
+  ▼
+Spring Boot
+  │
+  ├── Save USER message
+  │
+  ├── Load conversation history
+  │
+  ├── Build Spring AI Prompt
+  │
+  ├── Send prompt to Ollama
+  │
+  ├── Receive AI response
+  │
+  └── Save ASSISTANT message
+  │
+  ▼
+React
+```
+
+For a streaming response:
+
+```text
+React
+  │
+  │ POST /api/conversations/{id}/messages/stream
+  ▼
+Spring Boot
+  │
+  ├── Save USER message
+  │
+  ├── Load conversation history
+  │
+  └── Stream response from Ollama
+          │
+          ▼
+      Spring AI Flux
+          │
+          ▼
+      HTTP streaming
+          │
+          ▼
+        React
+          │
+          ├── Receive chunks
+          ├── Accumulate response
+          └── Render progressively
+```
+
+---
+
+# Technology Stack
+
+## Backend
+
+| Technology      | Version / Role      |
+| --------------- | ------------------- |
+| Java            | 21                  |
+| Spring Boot     | 4.1.0               |
+| Spring AI       | 2.0.0               |
+| Spring Web MVC  | REST API            |
+| Spring WebFlux  | Reactive streaming  |
+| Spring Data JPA | Persistence         |
+| Flyway          | Database migrations |
+| PostgreSQL      | Database            |
+| Maven           | Build               |
+| Ollama          | Local LLM runtime   |
+| qwen3:4b        | Current LLM model   |
+
+## Frontend
+
+| Technology               | Role                         |
+| ------------------------ | ---------------------------- |
+| React                    | UI                           |
+| TypeScript               | Type safety                  |
+| Vite                     | Development server and build |
+| react-markdown           | Markdown rendering           |
+| react-syntax-highlighter | Code highlighting            |
+| Fetch API                | Backend communication        |
+
+## Infrastructure
+
+| Technology | Role                        |
+| ---------- | --------------------------- |
+| Docker     | PostgreSQL container        |
+| PostgreSQL | Persistent application data |
+| Ollama     | Local LLM inference         |
+
+---
+
+# Project Structure
+
+```text
+ai-platform/
+│
+├── src/
+│   └── main/
+│       ├── java/
+│       │   └── com/bondocsystems/chat/
+│       │       ├── config/
+│       │       ├── controller/
+│       │       ├── exception/
+│       │       ├── model/
+│       │       ├── repository/
+│       │       └── service/
+│       │
+│       └── resources/
+│           ├── application.yml
+│           └── db/
+│               └── migration/
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── services/
+│   │   ├── types/
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── compose.yaml
+├── pom.xml
+├── mvnw
+├── mvnw.cmd
+└── README.md
+```
+
+---
+
+
 
 # Testing
 
