@@ -17,13 +17,28 @@ const [error, setError] = useState<string | null>(null);
 
   // Load conversations on mount
   useEffect(() => {
-    const load = async () => {
+  const load = async () => {
+    try {
+      setError(null);
+
       const data = await chatApi.getConversations();
+
       setConversations(data);
-      if (data.length > 0) setSelectedId(data[0].id);
-    };
-    load();
-  }, []);
+
+      if (data.length > 0) {
+        setSelectedId(data[0].id);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load conversations.',
+      );
+    }
+  };
+
+  load();
+}, []);
 
   const selectedConversation = conversations.find((c) => c.id === selectedId) || null;
 
