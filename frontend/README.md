@@ -2,55 +2,62 @@
 
 React + TypeScript + Vite frontend for the AI Platform.
 
-The frontend provides the web interface for the AI Platform's Spring Boot backend, which integrates Spring AI, Ollama, PostgreSQL, conversation persistence, and streaming LLM responses.
+The frontend provides the web interface for the AI Platform's Spring Boot backend. It provides the conversational user interface, conversation navigation, message rendering, Markdown support, syntax highlighting, and progressive display of streaming AI responses.
 
 The frontend is maintained as a separate application within the same repository.
+
+For the overall system architecture, backend, database, Ollama, API, and complete application setup, see the [root README](../README.md).
+
+---
 
 ## Overview
 
 The frontend provides:
 
 * AI chat interface
-* Conversation list and conversation selection
+* Conversation list and selection
 * Conversation history
 * User and assistant message rendering
-* Markdown rendering for assistant responses
+* Markdown rendering
 * Syntax highlighting for code blocks
-* Streaming LLM responses
+* Streaming AI responses
 * Backend API communication
 * Responsive chat interface
 
-The Spring Boot backend remains responsible for:
+The frontend does **not** contain:
 
-* REST API endpoints
 * LLM integration
-* Spring AI
-* Ollama
+* Ollama integration
 * Conversation persistence
-* PostgreSQL
-* Conversation context
-* Streaming LLM responses
+* PostgreSQL access
+* Conversation context management
 
-The frontend does not contain LLM or persistence logic. It communicates with the backend through HTTP APIs.
+Those responsibilities belong to the Spring Boot backend.
+
+The frontend communicates with the backend through HTTP APIs.
+
+---
 
 ## Technology Stack
 
-| Technology               | Purpose                                      |
-| ------------------------ | -------------------------------------------- |
-| React 18                 | UI framework                                 |
-| TypeScript 5             | Type-safe frontend development               |
-| Vite 4                   | Development server and production build tool |
-| react-markdown           | Markdown rendering                           |
-| react-syntax-highlighter | Syntax highlighting for code blocks          |
-| Chart.js                 | Client-side charting                         |
-| date-fns                 | Date formatting and manipulation             |
-| Lodash                   | Utility functions                            |
-| Native Fetch API         | Backend HTTP communication                   |
-| CSS                      | Application styling                          |
+| Technology               | Purpose                                 |
+| ------------------------ | --------------------------------------- |
+| React 18                 | UI framework                            |
+| TypeScript 5             | Type-safe frontend development          |
+| Vite 4                   | Development server and production build |
+| react-markdown           | Markdown rendering                      |
+| react-syntax-highlighter | Syntax highlighting                     |
+| Chart.js                 | Client-side charting                    |
+| date-fns                 | Date formatting and manipulation        |
+| Lodash                   | Utility functions                       |
+| Fetch API                | Backend HTTP communication              |
+| CSS                      | Application styling                     |
 
-Frontend dependencies are defined in `package.json` and locked through `package-lock.json`.
+Dependencies are defined in `package.json` and locked through `package-lock.json`.
 
-## Architecture
+---
+
+## Frontend Architecture
 
 The frontend acts as a client of the Spring Boot backend.
 
@@ -70,62 +77,64 @@ The frontend acts as a client of the Spring Boot backend.
                         │
                         │ HTTP / Streaming
                         ▼
-┌───────────────────────────────────────────────┐
-│             Spring Boot Backend               │
-│                                               │
-│ REST API                                      │
-│      │                                        │
-│      ▼                                        │
-│ Chat Service                                  │
-│      │                                        │
-│      ├── Spring AI                            │
-│      │      │                                 │
-│      │      ▼                                 │
-│      │   Ollama                               │
-│      │                                        │
-│      ├── Conversation Repository              │
-│      │                                        │
-│      └── Message Repository                   │
-│             │                                 │
-│             ▼                                 │
-│         PostgreSQL                            │
-└───────────────────────────────────────────────┘
+               Spring Boot Backend
 ```
 
-This separation allows the frontend and backend to evolve independently while maintaining a clear API boundary.
+The frontend maintains a clear API boundary with the backend. UI components are responsible for presentation and interaction, while backend communication is isolated in the frontend API layer.
+
+---
 
 ## Project Structure
 
 ```text
-ai-platform/
-├── src/                         # Spring Boot backend
-├── frontend/
-│   ├── src/
-│   │   ├── components/          # React UI components
-│   │   ├── services/            # Backend API communication
-│   │   ├── types/               # TypeScript types
-│   │   ├── App.tsx              # Root React component
-│   │   └── main.tsx             # React entry point
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   └── README.md
-├── pom.xml
+frontend/
+├── src/
+│   ├── components/
+│   │   ├── ChatWindow
+│   │   ├── ConversationList
+│   │   ├── MessageList
+│   │   ├── Message
+│   │   ├── MessageInput
+│   │   └── ...
+│   │
+│   ├── services/
+│   │   └── chatApi.ts
+│   │
+│   ├── types/
+│   │   └── ...
+│   │
+│   ├── App.tsx
+│   └── main.tsx
+│
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── vite.config.ts
 └── README.md
 ```
 
-## Frontend Components
+---
+
+## Components
 
 The frontend separates the user interface into focused React components.
 
 ### ChatWindow
 
-Coordinates the main chat interface, including the current conversation, messages, message input, and streaming state.
+Coordinates the main chat interface, including:
+
+* Current conversation
+* Messages
+* Message input
+* Loading state
+* Streaming state
 
 ### ConversationList
 
-Displays available conversations and allows the user to select an existing conversation or create a new one.
+Displays available conversations and allows the user to:
+
+* Select an existing conversation
+* Create a new conversation
 
 ### MessageList
 
@@ -147,9 +156,11 @@ The input supports:
 * Sending messages
 * Enter-to-send behavior
 * Shift+Enter for a new line
-* Appropriate disabled/loading states
+* Disabled/loading states
 
-### Markdown Rendering
+---
+
+## Markdown Rendering
 
 Assistant responses are rendered as Markdown rather than displaying raw Markdown syntax.
 
@@ -182,98 +193,43 @@ yaml
 
 Code blocks without a language identifier are rendered as plain code.
 
-## Backend Integration
+This allows AI-generated technical responses to remain readable while preserving source-code formatting.
 
-The frontend communicates with the Spring Boot backend through HTTP APIs.
+---
 
-The backend provides functionality for:
+## Streaming Responses
 
-* Creating conversations
-* Retrieving conversations
-* Retrieving conversation history
-* Sending messages
-* Streaming AI responses
+The backend supports streaming AI responses, and the frontend progressively updates the assistant message as response chunks arrive.
 
-The backend is the source of truth for conversation data.
-
-The frontend does not duplicate:
-
-* Conversation persistence
-* Message persistence
-* LLM integration
-* Conversation context management
-
-## Conversation Flow
-
-A typical conversation follows this flow:
+The frontend streaming flow is:
 
 ```text
-User
- │
- │ Create conversation
- ▼
-Spring Boot
- │
- ▼
-PostgreSQL
- │
- │ Conversation ID
- ▼
-React Frontend
- │
- │ Send message
- ▼
-Spring Boot
- │
- ├── Save USER message
- │
- ├── Retrieve conversation history
- │
- ├── Send context to LLM
- │
- ├── Receive AI response
- │
- └── Save ASSISTANT message
- │
- ▼
-React Frontend
- │
- └── Display assistant response
-```
-
-## Streaming
-
-The backend supports streaming LLM responses.
-
-The frontend consumes the streaming response and progressively updates the assistant message.
-
-```text
-Ollama
-   │
-   ▼
-Spring AI
-   │
-   ▼
 Spring Boot Streaming Endpoint
-   │
-   ▼
-React Streaming Client
-   │
-   ▼
-Accumulated Assistant Response
-   │
-   ▼
-Markdown Renderer
-   │
-   ▼
-Formatted Chat Message
+             │
+             │ response chunks
+             ▼
+       Fetch API
+             │
+             ▼
+     React Streaming Client
+             │
+             ▼
+   Accumulated Response
+             │
+             ▼
+      Markdown Renderer
+             │
+             ▼
+     Formatted Message
 ```
 
-Incoming chunks are accumulated into a single assistant message rather than being treated as separate messages.
+Incoming chunks are accumulated into a single assistant message rather than being displayed as separate messages.
 
-This allows the response to be rendered progressively while the model is generating it.
+This allows the user to see the response while the AI model is still generating it.
 
-## API Separation
+---
+
+## Backend API Integration
 
 Backend communication is isolated in:
 
@@ -282,6 +238,8 @@ src/services/chatApi.ts
 ```
 
 React components use the API abstraction rather than constructing backend requests throughout the UI.
+
+The general interaction is:
 
 ```text
 React Component
@@ -293,7 +251,19 @@ React Component
 Spring Boot REST API
 ```
 
-This keeps backend communication separate from presentation logic and makes future API changes easier to manage.
+The backend API provides functionality for:
+
+* Creating conversations
+* Listing conversations
+* Retrieving conversation history
+* Sending messages
+* Streaming AI responses
+
+The backend remains the source of truth for conversation and message data.
+
+The frontend does not duplicate persistence or LLM logic.
+
+---
 
 ## Type Safety
 
@@ -324,29 +294,47 @@ TypeScript strict mode is enabled.
 
 Avoid using `any` unless there is a specific technical reason.
 
+Explicit types help maintain a clear contract between the backend API and the React application.
+
+---
+
 ## Environment Configuration
 
-The frontend uses a Vite environment variable for the backend API base URL.
+The frontend uses the Vite environment variable:
+
+```text
+VITE_API_BASE_URL
+```
+
+to determine the backend API URL.
+
+For local development:
 
 ```text
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
-For local development, create a `.env` file in the `frontend/` directory when a custom API URL is required:
+If a custom API URL is required, create:
+
+```text
+frontend/.env
+```
+
+with:
 
 ```env
 VITE_API_BASE_URL=http://localhost:8080
 ```
 
+Restart the Vite development server after changing environment variables.
+
 Environment files containing secrets must not be committed.
 
-A template may be provided through:
+The frontend build itself does not require PostgreSQL, Ollama, or a running Spring Boot backend.
 
-```text
-.env.example
-```
+Those services are required when running the complete application.
 
-The frontend does not require backend services to perform its production build. The Spring Boot backend, PostgreSQL, and Ollama are required when running the complete application.
+---
 
 ## Prerequisites
 
@@ -355,13 +343,19 @@ For frontend development:
 * Node.js
 * npm
 
-For running the complete application:
+For running the complete AI Platform:
 
+* Node.js
+* npm
 * Spring Boot backend
 * PostgreSQL
 * Ollama
 
-The frontend itself does not run the LLM. LLM processing is handled by the backend through Ollama.
+The frontend does not run the LLM. LLM processing is handled by the backend through Ollama.
+
+For complete application setup, see the [root README](../README.md).
+
+---
 
 ## Running the Frontend
 
@@ -387,13 +381,21 @@ Vite will display the local development URL in the terminal.
 
 Open that URL in a browser.
 
+The frontend communicates with the Spring Boot API using the configured `VITE_API_BASE_URL`.
+
+---
+
 ## Development Workflow
 
-### 1. Start infrastructure
+To run the complete application locally:
 
-Start PostgreSQL and Ollama as required by the backend.
+### 1. Start PostgreSQL and Ollama
 
-### 2. Start the Spring Boot backend
+Start the infrastructure required by the backend.
+
+See the [root README](../README.md) for the complete setup.
+
+### 2. Start Spring Boot
 
 From the repository root:
 
@@ -401,7 +403,7 @@ From the repository root:
 ./mvnw spring-boot:run
 ```
 
-The backend normally runs on:
+The backend normally runs at:
 
 ```text
 http://localhost:8080
@@ -420,7 +422,13 @@ npm run dev
 
 Use the URL provided by Vite.
 
-The frontend communicates with the Spring Boot API through the configured `VITE_API_BASE_URL`.
+The frontend connects to the backend through:
+
+```text
+VITE_API_BASE_URL
+```
+
+---
 
 ## Production Build
 
@@ -432,7 +440,7 @@ From the `frontend/` directory:
 npm run build
 ```
 
-The generated production assets are written to:
+The generated assets are written to:
 
 ```text
 frontend/dist/
@@ -445,7 +453,7 @@ The production build does not require:
 * Ollama
 * A running backend
 
-The build validates that the frontend source code can be compiled and bundled successfully.
+A successful build confirms that the frontend source can be compiled and bundled successfully.
 
 To preview the production build locally:
 
@@ -453,25 +461,9 @@ To preview the production build locally:
 npm run preview
 ```
 
-## Production Build Validation
+---
 
-The frontend uses `package-lock.json` to provide reproducible dependency installation.
-
-For a clean installation:
-
-```bash
-npm ci
-```
-
-Then build the frontend:
-
-```bash
-npm run build
-```
-
-A successful build confirms that the frontend can be installed from the lockfile and compiled in a clean environment.
-
-### Validation Command
+## Build Validation
 
 The frontend provides a dedicated validation command:
 
@@ -479,7 +471,7 @@ The frontend provides a dedicated validation command:
 npm run validate
 ```
 
-The validation command runs the production build:
+The validation command currently runs the production build:
 
 ```text
 npm run validate
@@ -494,56 +486,103 @@ Vite production build
 frontend/dist/
 ```
 
-The generated `dist/` directory is build output and must not be committed to Git.
+The `validate` script is defined in `package.json` as:
 
-### Automated Validation
+```json
+"validate": "npm run build"
+```
 
-The frontend production build is also validated through GitHub Actions.
+This gives local development and CI a single command for validating that the frontend can be built successfully.
 
-The CI workflow performs the following steps:
+---
 
-1. Checks out the repository
-2. Sets up the required Node.js runtime
-3. Installs the exact dependency versions from `package-lock.json`
-4. Runs the frontend validation command
-5. Fails the workflow if the production build fails
+## Reproducible Builds
 
-The frontend build is intentionally independent of the Spring Boot backend and AI infrastructure.
+The frontend uses `package-lock.json` to provide reproducible dependency installation.
 
-This allows frontend build failures to be detected automatically without requiring PostgreSQL, Ollama, or a running backend.
+For a clean installation:
 
-## Build Reproducibility
+```bash
+npm ci
+```
 
-The frontend build is designed to be reproducible from a clean checkout.
+Then validate the frontend:
 
-The reproducible build process is:
+```bash
+npm run validate
+```
+
+The recommended clean validation process is:
 
 ```text
 Clean Repository
+       │
+       ▼
+package.json
+       │
+       ▼
+package-lock.json
+       │
+       ▼
+npm ci
+       │
+       ▼
+Installed Dependencies
+       │
+       ▼
+npm run validate
+       │
+       ▼
+Vite Production Build
+       │
+       ▼
+frontend/dist/
+```
+
+`npm ci` should be preferred for CI and clean-environment validation because it installs dependencies from the committed lockfile.
+
+---
+
+## Continuous Integration
+
+The repository uses a unified GitHub Actions workflow:
+
+```text
+.github/workflows/ci.yml
+```
+
+The workflow validates both the backend and frontend.
+
+It runs on:
+
+* Pushes to `main`
+* Pushes to `development`
+* Pull requests targeting `main`
+* Pull requests targeting `development`
+
+The frontend portion of CI performs:
+
+```text
+GitHub Actions
       │
       ▼
-frontend/package.json
-      │
-      ▼
-frontend/package-lock.json
+Node.js 20
       │
       ▼
 npm ci
-      │
-      ▼
-Installed Dependencies
       │
       ▼
 npm run validate
       │
       ▼
 Vite Production Build
-      │
-      ▼
-frontend/dist/
 ```
 
-`npm ci` should be preferred for CI and clean-environment validation because it installs dependencies from the committed lockfile.
+The frontend build does not require PostgreSQL, Ollama, or a running Spring Boot backend.
+
+This allows frontend compilation failures to be detected automatically as part of the repository CI pipeline.
+
+---
 
 ## Repository Hygiene
 
@@ -559,59 +598,42 @@ dist/
 .env.*.local
 ```
 
-The committed `package-lock.json` should remain in the repository so that CI and other developers can reproduce the frontend dependency installation.
-
-# Continuous Integration
-
-The project uses GitHub Actions to automatically build and test the application.
-
-The CI pipeline runs on:
-
-- Pushes to `main`
-- Pushes to `development`
-- Pull requests targeting `main`
-- Pull requests targeting `development`
-
-## CI Pipeline
-
-The pipeline validates both the backend and frontend.
+The following file should remain committed:
 
 ```text
-GitHub Actions
-      │
-      ├── Java 21
-      │
-      ├── PostgreSQL
-      │
-      ├── Maven
-      │     └── ./mvnw verify
-      │           ├── Compile
-      │           ├── Tests
-      │           └── Package
-      │
-      └── Node.js 20
-            └── npm ci
-                  └── npm run validate
+package-lock.json
 ```
 
-## Engineering Goals
+The lockfile allows developers and CI to reproduce the frontend dependency installation.
 
-The frontend is designed to demonstrate:
+Build output should not be committed:
 
-1. Modern frontend development using React and TypeScript
-2. Component-based UI architecture
-3. Integration with a Spring Boot REST API
-4. Streaming UI for LLM-generated responses
-5. Markdown rendering for AI responses
-6. Syntax highlighting for generated source code
-7. Type-safe frontend development
-8. Separation of UI and backend communication
-9. Reproducible production builds
-10. Automated frontend build validation
+```text
+frontend/dist/
+```
 
-The goal is to provide a focused web client for an AI backend without introducing unnecessary frontend complexity.
+---
 
-## Future Improvements
+## Engineering Characteristics
+
+The frontend is designed around several engineering principles:
+
+1. **Component-based UI architecture**
+2. **Type-safe development with TypeScript**
+3. **Clear separation between UI and API communication**
+4. **Backend-owned persistence and business logic**
+5. **Progressive rendering of streaming AI responses**
+6. **Structured Markdown rendering**
+7. **Syntax highlighting for generated source code**
+8. **Reproducible dependency installation**
+9. **Automated production-build validation**
+10. **Minimal frontend complexity**
+
+The frontend is intentionally focused on being a clear, maintainable client for the AI backend.
+
+---
+
+## Future Frontend Improvements
 
 Potential future improvements include:
 
@@ -623,14 +645,16 @@ Potential future improvements include:
 * Copy message button
 * Dark/light theme
 * Frontend automated tests
-* Error boundary
-* Authentication
-* Multi-model selection
+* Error boundaries
+* Authentication UI
+* Multi-model selection UI
 * RAG interface
 * Production deployment
 
 These features should be introduced incrementally as the application evolves.
 
+---
+
 ## License
 
-MIT License - See the root project license for details.
+MIT License — see the root project license for details.
