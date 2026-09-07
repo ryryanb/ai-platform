@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="docs/images/conversation1.png" alt="AI Platform conversation example 1" width="48%">
+  <img src="docs/images/conversation2.png" alt="AI Platform conversation example 2" width="48%">
+</p>
+
 # Prerequisites
 
 Install the following:
