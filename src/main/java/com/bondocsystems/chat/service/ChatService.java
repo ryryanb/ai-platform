@@ -71,7 +71,7 @@ public class ChatService {
     public Flux<String> stream(String prompt) {
 
         return chatClient
-                .prompt(prompt)
+                .prompt(promptEngineeringService.buildPrompt(prompt))
                 .stream()
                 .content();
     }
