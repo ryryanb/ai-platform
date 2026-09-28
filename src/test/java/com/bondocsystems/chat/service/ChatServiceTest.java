@@ -24,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.prompt.Prompt;
 
 import com.bondocsystems.chat.exception.ResourceNotFoundException;
 import com.bondocsystems.chat.model.Conversation;
@@ -47,11 +48,29 @@ class ChatServiceTest {
     @Mock
     private MessageRepository messageRepository;
 
+    @Mock
+    private PromptEngineeringService promptEngineeringService;
+
     @InjectMocks
     private ChatService chatService;
 
     private UUID conversationId;
     private Conversation conversation;
+
+    @BeforeEach
+    void configurePromptEngineeringService() {
+        when(promptEngineeringService.buildPrompt(any(String.class)))
+                .thenAnswer(invocation -> new Prompt(invocation.getArgument(0, String.class)));
+
+        when(promptEngineeringService.buildConversationPrompt(any()))
+                .thenAnswer(invocation -> new Prompt(
+                        invocation.<List<Message>>getArgument(0).stream()
+                                .map(message -> switch (message.getRole()) {
+                                    case USER -> new org.springframework.ai.chat.messages.UserMessage(message.getContent());
+                                    case ASSISTANT -> new org.springframework.ai.chat.messages.AssistantMessage(message.getContent());
+                                })
+                                .toList()));
+    }
 
     @BeforeEach
     void setUp() {
