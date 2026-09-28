@@ -68,11 +68,6 @@ class ChatServiceTest {
         conversation.setCreatedAt(Instant.now());
         conversation.setUpdatedAt(Instant.now());
 
-        when(promptEngineeringService.buildPrompt(any(String.class)))
-                .thenReturn(prompt);
-
-        when(promptEngineeringService.buildConversationPrompt(any()))
-                .thenReturn(prompt);
     }
 
     @Test
@@ -177,6 +172,9 @@ class ChatServiceTest {
                     message.setId(UUID.randomUUID());
                     return message;
                 });
+
+        when(promptEngineeringService.buildConversationPrompt(any()))
+                .thenReturn(prompt);
 
         ChatClient.ChatClientRequestSpec promptSpec =
                 org.mockito.Mockito.mock(ChatClient.ChatClientRequestSpec.class);
