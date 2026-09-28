@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeastOnce;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -51,6 +50,9 @@ class ChatServiceTest {
     @Mock
     private PromptEngineeringService promptEngineeringService;
 
+    @Mock
+    private Prompt prompt;
+
     @InjectMocks
     private ChatService chatService;
 
@@ -58,13 +60,21 @@ class ChatServiceTest {
     private Conversation conversation;
 
     @BeforeEach
-    void configurePromptEngineeringService() {
+    void setUp() {
+        conversationId = UUID.randomUUID();
+
+        conversation = new Conversation();
+        conversation.setId(conversationId);
+        conversation.setCreatedAt(Instant.now());
+        conversation.setUpdatedAt(Instant.now());
+
         when(promptEngineeringService.buildPrompt(any(String.class)))
-                .thenReturn(mock(Prompt.class));
+                .thenReturn(prompt);
 
         when(promptEngineeringService.buildConversationPrompt(any()))
-                .thenReturn(mock(Prompt.class));
+                .thenReturn(prompt);
     }
+
     @Test
     void createConversation_shouldCreateAndPersistConversation() {
         when(conversationRepository.save(any(Conversation.class)))
@@ -169,13 +179,12 @@ class ChatServiceTest {
                 });
 
         ChatClient.ChatClientRequestSpec promptSpec =
-                mock(ChatClient.ChatClientRequestSpec.class);
+                org.mockito.Mockito.mock(ChatClient.ChatClientRequestSpec.class);
 
         ChatClient.CallResponseSpec callResponseSpec =
-                mock(ChatClient.CallResponseSpec.class);
+                org.mockito.Mockito.mock(ChatClient.CallResponseSpec.class);
 
-        when(chatClient.prompt(any(
-                org.springframework.ai.chat.prompt.Prompt.class)))
+        when(chatClient.prompt(any(Prompt.class)))
                 .thenReturn(promptSpec);
 
         when(promptSpec.call()).thenReturn(callResponseSpec);
@@ -190,8 +199,9 @@ class ChatServiceTest {
         assertThat(result.getConversation()).isEqualTo(conversation);
 
         verify(messageRepository, times(2)).save(any(Message.class));
-        verify(chatClient).prompt(any(
-                org.springframework.ai.chat.prompt.Prompt.class));
+        verify(promptEngineeringService)
+                .buildConversationPrompt(any());
+        verify(chatClient).prompt(prompt);
         verify(promptSpec).call();
         verify(callResponseSpec).content();
     }
@@ -208,6 +218,7 @@ class ChatServiceTest {
 
         verify(messageRepository, never()).save(any());
         verifyNoInteractions(chatClient);
+        verifyNoInteractions(promptEngineeringService);
     }
 
     @Test
@@ -250,13 +261,12 @@ class ChatServiceTest {
                         createMessage(MessageRole.USER, userContent)));
 
         ChatClient.ChatClientRequestSpec promptSpec =
-                mock(ChatClient.ChatClientRequestSpec.class);
+                org.mockito.Mockito.mock(ChatClient.ChatClientRequestSpec.class);
 
         ChatClient.StreamResponseSpec streamResponseSpec =
-                mock(ChatClient.StreamResponseSpec.class);
+                org.mockito.Mockito.mock(ChatClient.StreamResponseSpec.class);
 
-        when(chatClient.prompt(any(
-                org.springframework.ai.chat.prompt.Prompt.class)))
+        when(chatClient.prompt(any(Prompt.class)))
                 .thenReturn(promptSpec);
 
         when(promptSpec.stream()).thenReturn(streamResponseSpec);
@@ -294,6 +304,10 @@ class ChatServiceTest {
 
         assertThat(assistantMessage.getContent())
                 .isEqualTo(assistantContent);
+
+        verify(promptEngineeringService)
+                .buildConversationPrompt(any());
+        verify(chatClient).prompt(prompt);
     }
 
     @Test
@@ -310,6 +324,7 @@ class ChatServiceTest {
 
         verifyNoInteractions(chatClient);
         verify(messageRepository, never()).save(any());
+        verifyNoInteractions(promptEngineeringService);
     }
 
     private Message createMessage(
