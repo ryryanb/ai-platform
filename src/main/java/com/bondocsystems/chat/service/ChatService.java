@@ -7,8 +7,6 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.chat.messages.AssistantMessage;
-import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Service;
 
@@ -34,15 +32,18 @@ public class ChatService {
         
         
         private final MessageRepository messageRepository;
+    private final PromptEngineeringService promptEngineeringService;
 
     public ChatService(
         ChatClient chatClient,
         ConversationRepository conversationRepository,
-        MessageRepository messageRepository) {
+        MessageRepository messageRepository,
+        PromptEngineeringService promptEngineeringService) {
 
     this.chatClient = chatClient;
     this.conversationRepository = conversationRepository;
     this.messageRepository = messageRepository;
+    this.promptEngineeringService = promptEngineeringService;
 }
 
     /**
@@ -70,7 +71,7 @@ public class ChatService {
     public Flux<String> stream(String prompt) {
 
         return chatClient
-                .prompt(prompt)
+                .prompt(promptEngineeringService.buildPrompt(prompt))
                 .stream()
                 .content();
     }
@@ -106,12 +107,8 @@ public com.bondocsystems.chat.model.Message sendMessage(
             messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
 
     // Convert database messages to Spring AI messages
-    List<org.springframework.ai.chat.messages.Message> aiMessages = history.stream()
-            .map(this::toAiMessage)
-            .toList();
-
-    // Send the conversation history to the LLM
-    Prompt prompt = new Prompt(aiMessages);
+    // Build the LLM prompt through the prompt-engineering layer
+    Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
 
     String aiResponse = chatClient
             .prompt(prompt)
@@ -130,15 +127,6 @@ public com.bondocsystems.chat.model.Message sendMessage(
     messageRepository.save(assistantMessage);
 
     return assistantMessage;
-}
-
-private org.springframework.ai.chat.messages.Message toAiMessage(
-        com.bondocsystems.chat.model.Message message) {
-
-    return switch (message.getRole()) {
-        case USER -> new UserMessage(message.getContent());
-        case ASSISTANT -> new AssistantMessage(message.getContent());
-    };
 }
 
 public Conversation createConversation() {
@@ -193,12 +181,7 @@ public Flux<String> streamMessage(
             messageRepository
                     .findByConversationIdOrderByCreatedAt(conversationId);
 
-    List<org.springframework.ai.chat.messages.Message> aiMessages =
-            history.stream()
-                    .map(this::toAiMessage)
-                    .toList();
-
-    Prompt prompt = new Prompt(aiMessages);
+    Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
 
     StringBuilder responseBuilder = new StringBuilder();
 
