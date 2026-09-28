@@ -258,6 +258,9 @@ class ChatServiceTest {
                 .thenReturn(List.of(
                         createMessage(MessageRole.USER, userContent)));
 
+        when(promptEngineeringService.buildConversationPrompt(any()))
+                .thenReturn(prompt);
+
         ChatClient.ChatClientRequestSpec promptSpec =
                 org.mockito.Mockito.mock(ChatClient.ChatClientRequestSpec.class);
 
