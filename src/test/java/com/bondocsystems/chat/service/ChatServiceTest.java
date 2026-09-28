@@ -60,28 +60,11 @@ class ChatServiceTest {
     @BeforeEach
     void configurePromptEngineeringService() {
         when(promptEngineeringService.buildPrompt(any(String.class)))
-                .thenAnswer(invocation -> new Prompt(invocation.getArgument(0, String.class)));
+                .thenReturn(mock(Prompt.class));
 
         when(promptEngineeringService.buildConversationPrompt(any()))
-                .thenAnswer(invocation -> new Prompt(
-                        invocation.<List<Message>>getArgument(0).stream()
-                                .map(message -> switch (message.getRole()) {
-                                    case USER -> new org.springframework.ai.chat.messages.UserMessage(message.getContent());
-                                    case ASSISTANT -> new org.springframework.ai.chat.messages.AssistantMessage(message.getContent());
-                                })
-                                .toList()));
+                .thenReturn(mock(Prompt.class));
     }
-
-    @BeforeEach
-    void setUp() {
-        conversationId = UUID.randomUUID();
-
-        conversation = new Conversation();
-        conversation.setId(conversationId);
-        conversation.setCreatedAt(Instant.now());
-        conversation.setUpdatedAt(Instant.now());
-    }
-
     @Test
     void createConversation_shouldCreateAndPersistConversation() {
         when(conversationRepository.save(any(Conversation.class)))
