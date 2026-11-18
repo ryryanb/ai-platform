@@ -1,6 +1,7 @@
 package com.bondocsystems.chat.controller;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -32,7 +34,16 @@ class ChatControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-private ChatService chatService;
+    private ChatService chatService;
+
+    @MockitoBean
+    private JwtDecoder jwtDecoder;
+
+    @Test
+    void getConversations_shouldRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/conversations"))
+                .andExpect(status().isUnauthorized());
+    }
 
     @Test
     void createConversation_shouldReturnCreated() throws Exception {
@@ -43,10 +54,10 @@ private ChatService chatService;
         conversation.setCreatedAt(Instant.now());
         conversation.setUpdatedAt(Instant.now());
 
-        when(chatService.createConversation())
+        when(chatService.createConversation("customer-test"))
                 .thenReturn(conversation);
 
-        mockMvc.perform(post("/api/conversations"))
+        mockMvc.perform(post("/api/conversations").with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(id.toString()));
     }
@@ -63,10 +74,10 @@ private ChatService chatService;
         conversation.setCreatedAt(Instant.now());
         conversation.setUpdatedAt(Instant.now());
 
-        when(chatService.getConversations())
+        when(chatService.getConversations("customer-test"))
                 .thenReturn(List.of(conversation));
 
-        mockMvc.perform(get("/api/conversations"))
+        mockMvc.perform(get("/api/conversations").with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id")
                         .value(id.toString()));
@@ -85,12 +96,12 @@ private ChatService chatService;
         message.setContent("Hello");
         message.setCreatedAt(Instant.now());
 
-        when(chatService.getConversationHistory(conversationId))
+        when(chatService.getConversationHistory(conversationId, "customer-test"))
                 .thenReturn(List.of(message));
 
         mockMvc.perform(
                 get("/api/conversations/{conversationId}/messages",
-                        conversationId))
+                        conversationId).with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].content")
                         .value("Hello"))
@@ -113,14 +124,15 @@ private ChatService chatService;
 
         when(chatService.sendMessage(
                 conversationId,
-                "Hello"))
+                "Hello", "customer-test"))
                 .thenReturn(response);
 
         mockMvc.perform(
                 post("/api/conversations/{conversationId}/messages",
                         conversationId)
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Hello"))
+                        .content("Hello")
+                        .with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role")
                         .value("ASSISTANT"))
@@ -134,13 +146,13 @@ private ChatService chatService;
 
         UUID conversationId = UUID.randomUUID();
 
-        when(chatService.getConversationHistory(conversationId))
+        when(chatService.getConversationHistory(conversationId, "customer-test"))
                 .thenThrow(new ResourceNotFoundException(
                         "Conversation not found"));
 
         mockMvc.perform(
                 get("/api/conversations/{conversationId}/messages",
-                        conversationId))
+                        conversationId).with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -152,7 +164,7 @@ private ChatService chatService;
 
         when(chatService.sendMessage(
                 conversationId,
-                "Hello"))
+                "Hello", "customer-test"))
                 .thenThrow(new ResourceNotFoundException(
                         "Conversation not found"));
 
@@ -160,7 +172,8 @@ private ChatService chatService;
                 post("/api/conversations/{conversationId}/messages",
                         conversationId)
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Hello"))
+                        .content("Hello")
+                        .with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -172,7 +185,7 @@ private ChatService chatService;
 
         when(chatService.streamMessage(
                 conversationId,
-                "Hello"))
+                "Hello", "customer-test"))
                 .thenReturn(
                         Flux.just(
                                 "Hello ",
@@ -182,7 +195,8 @@ private ChatService chatService;
                 post("/api/conversations/{conversationId}/messages/stream",
                         conversationId)
                         .contentType(MediaType.TEXT_PLAIN)
-                        .content("Hello"))
+                        .content("Hello")
+                        .with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(
                         org.springframework.test.web.servlet.result

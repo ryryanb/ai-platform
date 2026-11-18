@@ -3,6 +3,7 @@ package com.bondocsystems.chat.model;
 import java.time.Instant;
 import java.util.UUID;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
@@ -19,7 +20,9 @@ public class Conversation {
 
     private String title;
 
+    @Column(name = "customer_id", length = 100)
+    private String customerId;
+
     private Instant createdAt;
     private Instant updatedAt;
-
 }

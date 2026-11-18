@@ -935,3 +935,23 @@ Potential future improvements include:
 * Production deployment
 
 Features will be introduced incrementally as the application evolves.
+
+## FinTech JWT authentication
+
+The API is a stateless OAuth2 Resource Server. Every API endpoint except the actuator health endpoint requires a bearer access token signed with the FinTech Auth Service RSA private key. The AI Platform verifies the signature using the matching public key. Never copy the private key into this repository or the AI service.
+
+Configure the public key path and datasource through environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `JWT_PUBLIC_KEY_PATH` | Public key in PEM X.509 format, for example `file:/run/secrets/fintech-jwt-public.pem` |
+| `SPRING_DATASOURCE_URL` | AI Platform PostgreSQL JDBC URL |
+| `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | Database credentials |
+| `OLLAMA_BASE_URL` / `OLLAMA_CHAT_MODEL` | Ollama endpoint and model |
+| `APP_CORS_ALLOWED_ORIGINS` | Comma-separated trusted browser origins; defaults to `http://localhost:5173` |
+
+Tokens must contain a non-empty `customerId` claim. The AI service derives the customer from the verified token and never accepts a customer identifier from request data. Conversation list, history, synchronous message, and streaming message operations all enforce ownership. A conversation belonging to another customer is reported as not found.
+
+The Flyway migration adds nullable `customer_id` to preserve legacy conversations without assigning them to an arbitrary customer. Those legacy rows are intentionally not returned by authenticated customer-scoped APIs; they require an explicit, trusted ownership migration before they can be made visible.
+
+Send the FinTech-issued token on API requests using `Authorization: Bearer <fintech-access-token>`. Do not disable JWT validation or use a development fallback key outside isolated tests.
