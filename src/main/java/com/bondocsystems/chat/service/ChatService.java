@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import com.bondocsystems.chat.exception.ResourceNotFoundException;
@@ -23,219 +24,135 @@ import reactor.core.publisher.Flux;
 @Service
 public class ChatService {
 
-    private final ChatClient chatClient;
-    private static final Logger log =
-        LoggerFactory.getLogger(ChatService.class);
+    private static final Logger log = LoggerFactory.getLogger(ChatService.class);
+    private static final int CONVERSATION_TITLE_MAX_LENGTH = 60;
 
-        
-        private final ConversationRepository conversationRepository;
-        
-        
-        private final MessageRepository messageRepository;
+    private final ChatClient chatClient;
+    private final ConversationRepository conversationRepository;
+    private final MessageRepository messageRepository;
     private final PromptEngineeringService promptEngineeringService;
 
     public ChatService(
-        ChatClient chatClient,
-        ConversationRepository conversationRepository,
-        MessageRepository messageRepository,
-        PromptEngineeringService promptEngineeringService) {
+            ChatClient chatClient,
+            ConversationRepository conversationRepository,
+            MessageRepository messageRepository,
+            PromptEngineeringService promptEngineeringService) {
+        this.chatClient = chatClient;
+        this.conversationRepository = conversationRepository;
+        this.messageRepository = messageRepository;
+        this.promptEngineeringService = promptEngineeringService;
+    }
 
-    this.chatClient = chatClient;
-    this.conversationRepository = conversationRepository;
-    this.messageRepository = messageRepository;
-    this.promptEngineeringService = promptEngineeringService;
-}
-
-    /**
-     * Traditional blocking chat request.
-     */
     public String chat(String message) {
-
         long start = System.nanoTime();
-
-        String response = chatClient
-                .prompt(message)
-                .call()
-                .content();
-
-        long durationMs = (System.nanoTime() - start) / 1_000_000;
-
-        log.info("LLM response time: {} ms", durationMs);
-
+        String response = chatClient.prompt(message).call().content();
+        log.info("LLM response time: {} ms", (System.nanoTime() - start) / 1_000_000);
         return response;
     }
 
-    /**
-     * Streams the AI response as it is generated.
-     */
     public Flux<String> stream(String prompt) {
-
-        return chatClient
-                .prompt(promptEngineeringService.buildPrompt(prompt))
-                .stream()
-                .content();
+        return chatClient.prompt(promptEngineeringService.buildPrompt(prompt)).stream().content();
     }
 
     @Transactional
-public com.bondocsystems.chat.model.Message sendMessage(
-        UUID conversationId,
-        String message) {
+    public Message sendMessage(UUID conversationId, String message, String customerId) {
+        Conversation conversation = getOwnedConversation(conversationId, customerId);
+        Message userMessage = createMessage(conversation, MessageRole.USER, message);
+        messageRepository.save(userMessage);
 
-    Conversation conversation = conversationRepository.findById(conversationId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException("Conversation not found"));
+        if (conversation.getTitle() == null) {
+            conversation.setTitle(generateConversationTitle(message));
+            conversation.setUpdatedAt(Instant.now());
+            conversationRepository.save(conversation);
+        }
 
-    // Save the user's message
-    com.bondocsystems.chat.model.Message userMessage =
-            new com.bondocsystems.chat.model.Message();
+        List<Message> history = messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
+        Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
+        String aiResponse = chatClient.prompt(prompt).call().content();
 
-    userMessage.setConversation(conversation);
-    userMessage.setRole(MessageRole.USER);
-    userMessage.setContent(message);
-    userMessage.setCreatedAt(Instant.now());
-
-    messageRepository.save(userMessage);
-
-    if (conversation.getTitle() == null) {
-    conversation.setTitle(generateConversationTitle(message));
-    conversation.setUpdatedAt(Instant.now());
-    conversationRepository.save(conversation);
-}
-
-    // Retrieve the conversation history
-    List<com.bondocsystems.chat.model.Message> history =
-            messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
-
-    // Convert database messages to Spring AI messages
-    // Build the LLM prompt through the prompt-engineering layer
-    Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
-
-    String aiResponse = chatClient
-            .prompt(prompt)
-            .call()
-            .content();
-
-    // Save the assistant's response
-    com.bondocsystems.chat.model.Message assistantMessage =
-            new com.bondocsystems.chat.model.Message();
-
-    assistantMessage.setConversation(conversation);
-    assistantMessage.setRole(MessageRole.ASSISTANT);
-    assistantMessage.setContent(aiResponse);
-    assistantMessage.setCreatedAt(Instant.now());
-
-    messageRepository.save(assistantMessage);
-
-    return assistantMessage;
-}
-
-public Conversation createConversation() {
-    Conversation conversation = new Conversation();
-
-    Instant now = Instant.now();
-    conversation.setCreatedAt(now);
-    conversation.setUpdatedAt(now);
-
-    return conversationRepository.save(conversation);
-}
-
-public List<Message> getConversationHistory(UUID conversationId) {
-    conversationRepository.findById(conversationId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException("Conversation not found"));
-
-    return messageRepository
-            .findByConversationIdOrderByCreatedAt(conversationId);
-}
-
-public List<Conversation> getConversations() {
-    return conversationRepository.findAll();
-}
-
-public Flux<String> streamMessage(
-        UUID conversationId,
-        String message) {
-
-    Conversation conversation = conversationRepository
-            .findById(conversationId)
-            .orElseThrow(() ->
-                    new ResourceNotFoundException(
-                            "Conversation not found"));
-
-    Message userMessage = new Message();
-    userMessage.setConversation(conversation);
-    userMessage.setRole(MessageRole.USER);
-    userMessage.setContent(message);
-    userMessage.setCreatedAt(Instant.now());
-
-    messageRepository.save(userMessage);
-
-    if (conversation.getTitle() == null) {
-    conversation.setTitle(generateConversationTitle(message));
-    conversation.setUpdatedAt(Instant.now());
-    conversationRepository.save(conversation);
-}
-
-
-    List<Message> history =
-            messageRepository
-                    .findByConversationIdOrderByCreatedAt(conversationId);
-
-    Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
-
-    StringBuilder responseBuilder = new StringBuilder();
-
-    return chatClient
-            .prompt(prompt)
-            .stream()
-            .content()
-            .doOnNext(responseBuilder::append)
-.doOnComplete(() ->
-    saveAssistantMessage(conversation, responseBuilder.toString())
-)
-.doOnError(error ->
-    log.error(
-        "AI response streaming failed for conversation {}",
-        conversationId,
-        error
-    )
-);
-}
-
-@Transactional
-public void saveAssistantMessage(
-        Conversation conversation,
-        String content) {
-
-    Message assistantMessage = new Message();
-    assistantMessage.setConversation(conversation);
-    assistantMessage.setRole(MessageRole.ASSISTANT);
-    assistantMessage.setContent(content);
-    assistantMessage.setCreatedAt(Instant.now());
-
-    messageRepository.save(assistantMessage);
-}
-
-private static final int CONVERSATION_TITLE_MAX_LENGTH = 60;
-
-private String generateConversationTitle(String message) {
-    String title = message
-        .replaceAll("\\s+", " ")
-        .trim();
-
-    if (title.length() <= CONVERSATION_TITLE_MAX_LENGTH) {
-        return title;
+        Message assistantMessage = createMessage(conversation, MessageRole.ASSISTANT, aiResponse);
+        return messageRepository.save(assistantMessage);
     }
 
-    String truncated = title.substring(0, CONVERSATION_TITLE_MAX_LENGTH - 3);
-
-    int lastSpace = truncated.lastIndexOf(' ');
-
-    if (lastSpace > 0) {
-        truncated = truncated.substring(0, lastSpace);
+    @Transactional
+    public Conversation createConversation(String customerId) {
+        if (customerId == null || customerId.isBlank()) {
+            throw new AccessDeniedException("A customer identity is required");
+        }
+        Instant now = Instant.now();
+        Conversation conversation = new Conversation();
+        conversation.setCustomerId(customerId);
+        conversation.setCreatedAt(now);
+        conversation.setUpdatedAt(now);
+        return conversationRepository.save(conversation);
     }
 
-    return truncated + "...";
-}
+    @Transactional
+    public List<Message> getConversationHistory(UUID conversationId, String customerId) {
+        getOwnedConversation(conversationId, customerId);
+        return messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
+    }
 
+    @Transactional
+    public List<Conversation> getConversations(String customerId) {
+        if (customerId == null || customerId.isBlank()) {
+            throw new AccessDeniedException("A customer identity is required");
+        }
+        return conversationRepository.findAllByCustomerIdOrderByUpdatedAtDesc(customerId);
+    }
+
+    public Flux<String> streamMessage(UUID conversationId, String message, String customerId) {
+        Conversation conversation = getOwnedConversation(conversationId, customerId);
+        messageRepository.save(createMessage(conversation, MessageRole.USER, message));
+
+        if (conversation.getTitle() == null) {
+            conversation.setTitle(generateConversationTitle(message));
+            conversation.setUpdatedAt(Instant.now());
+            conversationRepository.save(conversation);
+        }
+
+        List<Message> history = messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
+        Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
+        StringBuilder responseBuilder = new StringBuilder();
+
+        return chatClient.prompt(prompt).stream().content()
+                .doOnNext(responseBuilder::append)
+                .doOnComplete(() -> saveAssistantMessage(conversation, responseBuilder.toString()))
+                .doOnError(error -> log.error("AI response streaming failed for conversation {}", conversationId, error));
+    }
+
+    private Conversation getOwnedConversation(UUID conversationId, String customerId) {
+        if (customerId == null || customerId.isBlank()) {
+            throw new AccessDeniedException("A customer identity is required");
+        }
+        return conversationRepository.findByIdAndCustomerId(conversationId, customerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+    }
+
+    private Message createMessage(Conversation conversation, MessageRole role, String content) {
+        Message message = new Message();
+        message.setConversation(conversation);
+        message.setRole(role);
+        message.setContent(content);
+        message.setCreatedAt(Instant.now());
+        return message;
+    }
+
+    @Transactional
+    public void saveAssistantMessage(Conversation conversation, String content) {
+        messageRepository.save(createMessage(conversation, MessageRole.ASSISTANT, content));
+    }
+
+    private String generateConversationTitle(String message) {
+        String title = message.replaceAll("\\s+", " ").trim();
+        if (title.length() <= CONVERSATION_TITLE_MAX_LENGTH) {
+            return title;
+        }
+        String truncated = title.substring(0, CONVERSATION_TITLE_MAX_LENGTH - 3);
+        int lastSpace = truncated.lastIndexOf(' ');
+        if (lastSpace > 0) {
+            truncated = truncated.substring(0, lastSpace);
+        }
+        return truncated + "...";
+    }
 }
