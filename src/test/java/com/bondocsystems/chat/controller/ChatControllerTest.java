@@ -71,7 +71,7 @@ class ChatControllerTest {
         when(chatService.getConversations("customer-test"))
                 .thenReturn(List.of(conversation));
 
-        mockMvc.perform(get("/api/conversations"))
+        mockMvc.perform(get("/api/conversations").with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id")
                         .value(id.toString()));
@@ -140,7 +140,7 @@ class ChatControllerTest {
 
         UUID conversationId = UUID.randomUUID();
 
-        when(chatService.getConversationHistory(conversationId))
+        when(chatService.getConversationHistory(conversationId, "customer-test"))
                 .thenThrow(new ResourceNotFoundException(
                         "Conversation not found"));
 
