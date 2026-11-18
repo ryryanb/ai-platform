@@ -51,7 +51,7 @@ class ChatControllerTest {
         when(chatService.createConversation("customer-test"))
                 .thenReturn(conversation);
 
-        mockMvc.perform(post("/api/conversations").with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+        mockMvc.perform(post("/api/conversations").with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(id.toString()));
     }
@@ -71,7 +71,7 @@ class ChatControllerTest {
         when(chatService.getConversations("customer-test"))
                 .thenReturn(List.of(conversation));
 
-        mockMvc.perform(get("/api/conversations").with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+        mockMvc.perform(get("/api/conversations").with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id")
                         .value(id.toString()));
@@ -95,7 +95,7 @@ class ChatControllerTest {
 
         mockMvc.perform(
                 get("/api/conversations/{conversationId}/messages",
-                        conversationId).with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                        conversationId).with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].content")
                         .value("Hello"))
@@ -126,7 +126,7 @@ class ChatControllerTest {
                         conversationId)
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("Hello")
-                        .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                        .with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role")
                         .value("ASSISTANT"))
@@ -146,7 +146,7 @@ class ChatControllerTest {
 
         mockMvc.perform(
                 get("/api/conversations/{conversationId}/messages",
-                        conversationId).with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                        conversationId).with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -167,7 +167,7 @@ class ChatControllerTest {
                         conversationId)
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("Hello")
-                        .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                        .with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isNotFound());
     }
 
@@ -190,7 +190,7 @@ class ChatControllerTest {
                         conversationId)
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("Hello")
-                        .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                        .with(jwt().jwt(token -> token.tokenValue("test-token").claim("customerId", "customer-test"))))
                 .andExpect(status().isOk())
                 .andExpect(
                         org.springframework.test.web.servlet.result
