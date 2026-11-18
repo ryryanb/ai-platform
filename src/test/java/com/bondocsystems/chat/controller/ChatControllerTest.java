@@ -40,6 +40,12 @@ class ChatControllerTest {
     private JwtDecoder jwtDecoder;
 
     @Test
+    void getConversations_shouldRequireAuthentication() throws Exception {
+        mockMvc.perform(get("/api/conversations"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void createConversation_shouldReturnCreated() throws Exception {
         UUID id = UUID.randomUUID();
 
