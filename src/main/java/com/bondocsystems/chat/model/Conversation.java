@@ -20,7 +20,7 @@ public class Conversation {
 
     private String title;
 
-    @Column(name = "customer_id", nullable = false, length = 100)
+    @Column(name = "customer_id", length = 100)
     private String customerId;
 
     private Instant createdAt;
