@@ -54,6 +54,13 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
+      - name: Generate ephemeral RSA key pair for security configuration tests
+        run: |
+          mkdir -p "$RUNNER_TEMP/ai-platform-jwt"
+          openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out "$RUNNER_TEMP/ai-platform-jwt/private.pem"
+          openssl pkey -in "$RUNNER_TEMP/ai-platform-jwt/private.pem" -pubout -out "$RUNNER_TEMP/ai-platform-jwt/public.pem"
+          echo "JWT_PUBLIC_KEY_PATH=file:$RUNNER_TEMP/ai-platform-jwt/public.pem" >> "$GITHUB_ENV"
+
       - name: Build and test backend
         run: ./mvnw verify
 
