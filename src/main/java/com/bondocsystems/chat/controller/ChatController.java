@@ -6,6 +6,9 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,54 +38,50 @@ public class ChatController {
         return chatService.chat(message);
     }
 
-    @GetMapping(
-            value = "/../stream",
-            produces = MediaType.TEXT_EVENT_STREAM_VALUE
-    )
+    @GetMapping(value = "/../stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> stream(@RequestParam String message) {
         return chatService.stream(message);
     }
 
     @PostMapping
-public ResponseEntity<Conversation> createConversation() {
-    return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(chatService.createConversation());
-}
+    public ResponseEntity<Conversation> createConversation(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(chatService.createConversation(customerId(jwt)));
+    }
 
     @PostMapping("/{conversationId}/messages")
     public ResponseEntity<Message> sendMessage(
             @PathVariable UUID conversationId,
-            @RequestBody String message) {
-
-        return ResponseEntity.ok(
-                chatService.sendMessage(conversationId, message)
-        );
+            @RequestBody String message,
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(chatService.sendMessage(conversationId, message, customerId(jwt)));
     }
 
     @GetMapping("/{conversationId}/messages")
     public ResponseEntity<List<Message>> getConversationHistory(
-            @PathVariable UUID conversationId) {
-
-        return ResponseEntity.ok(
-                chatService.getConversationHistory(conversationId)
-        );
+            @PathVariable UUID conversationId,
+            @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(chatService.getConversationHistory(conversationId, customerId(jwt)));
     }
 
     @GetMapping
-public ResponseEntity<List<Conversation>> getConversations() {
-    return ResponseEntity.ok(chatService.getConversations());
-}
+    public ResponseEntity<List<Conversation>> getConversations(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(chatService.getConversations(customerId(jwt)));
+    }
 
-   @PostMapping(
-    value = "/{conversationId}/messages/stream",
-    produces = MediaType.TEXT_PLAIN_VALUE
-)
-public Flux<String> streamMessage(
-        @PathVariable UUID conversationId,
-        @RequestBody String message) {
+    @PostMapping(value = "/{conversationId}/messages/stream", produces = MediaType.TEXT_PLAIN_VALUE)
+    public Flux<String> streamMessage(
+            @PathVariable UUID conversationId,
+            @RequestBody String message,
+            @AuthenticationPrincipal Jwt jwt) {
+        return chatService.streamMessage(conversationId, message, customerId(jwt));
+    }
 
-    return chatService.streamMessage(conversationId, message);
-}
-
+    private String customerId(Jwt jwt) {
+        String customerId = jwt == null ? null : jwt.getClaimAsString("customerId");
+        if (customerId == null || customerId.isBlank()) {
+            throw new AccessDeniedException("The access token does not contain a customer identity");
+        }
+        return customerId;
+    }
 }
