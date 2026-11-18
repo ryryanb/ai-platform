@@ -18,6 +18,7 @@ security:
     public-key-location: ${JWT_PUBLIC_KEY_PATH:file:./keys/jwt-public.pem}
 
 server:
+  port: ${SERVER_PORT:8089}
   error:
     include-message: never
 
