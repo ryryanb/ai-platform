@@ -38,6 +38,8 @@ import reactor.test.StepVerifier;
 @ExtendWith(MockitoExtension.class)
 class ChatServiceTest {
 
+    private static final String CUSTOMER_ID = "customer-test";
+
     @Mock
     private ChatClient chatClient;
 
@@ -98,7 +100,7 @@ class ChatServiceTest {
                 .hasSize(2)
                 .containsExactly(conversation, secondConversation);
 
-        verify(conversationRepository).findAll();
+        verify(conversationRepository).findAllByCustomerIdOrderByUpdatedAtDesc(CUSTOMER_ID);
     }
 
     @Test
@@ -125,7 +127,7 @@ class ChatServiceTest {
                 .hasSize(2)
                 .containsExactly(userMessage, assistantMessage);
 
-        verify(conversationRepository).findById(conversationId);
+        verify(conversationRepository).findByIdAndCustomerId(conversationId, CUSTOMER_ID);
         verify(messageRepository)
                 .findByConversationIdOrderByCreatedAt(conversationId);
     }
