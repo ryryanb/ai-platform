@@ -77,7 +77,7 @@ class ChatServiceTest {
         when(conversationRepository.save(any(Conversation.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        Conversation result = chatService.createConversation();
+        Conversation result = chatService.createConversation(CUSTOMER_ID);
 
         assertThat(result).isNotNull();
         assertThat(result.getCreatedAt()).isNotNull();
@@ -91,10 +91,10 @@ class ChatServiceTest {
         Conversation secondConversation = new Conversation();
         secondConversation.setId(UUID.randomUUID());
 
-        when(conversationRepository.findAll())
+        when(conversationRepository.findAllByCustomerIdOrderByUpdatedAtDesc(CUSTOMER_ID))
                 .thenReturn(List.of(conversation, secondConversation));
 
-        List<Conversation> result = chatService.getConversations();
+        List<Conversation> result = chatService.getConversations(CUSTOMER_ID);
 
         assertThat(result)
                 .hasSize(2)
@@ -113,7 +113,7 @@ class ChatServiceTest {
                 MessageRole.ASSISTANT,
                 "Hello! How can I help?");
 
-        when(conversationRepository.findById(conversationId))
+        when(conversationRepository.findByIdAndCustomerId(conversationId, CUSTOMER_ID))
                 .thenReturn(Optional.of(conversation));
 
         when(messageRepository.findByConversationIdOrderByCreatedAt(
@@ -121,7 +121,7 @@ class ChatServiceTest {
                 .thenReturn(List.of(userMessage, assistantMessage));
 
         List<Message> result =
-                chatService.getConversationHistory(conversationId);
+                chatService.getConversationHistory(conversationId, CUSTOMER_ID);
 
         assertThat(result)
                 .hasSize(2)
@@ -134,11 +134,11 @@ class ChatServiceTest {
 
     @Test
     void getConversationHistory_shouldThrowWhenConversationDoesNotExist() {
-        when(conversationRepository.findById(conversationId))
+        when(conversationRepository.findByIdAndCustomerId(conversationId, CUSTOMER_ID))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                chatService.getConversationHistory(conversationId))
+                chatService.getConversationHistory(conversationId, CUSTOMER_ID))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Conversation not found");
 
@@ -151,7 +151,7 @@ class ChatServiceTest {
         String userContent = "What is Spring Boot?";
         String assistantContent = "Spring Boot is a framework for Java applications.";
 
-        when(conversationRepository.findById(conversationId))
+        when(conversationRepository.findByIdAndCustomerId(conversationId, CUSTOMER_ID))
                 .thenReturn(Optional.of(conversation));
 
         when(messageRepository.findByConversationIdOrderByCreatedAt(
@@ -191,7 +191,7 @@ class ChatServiceTest {
         when(callResponseSpec.content()).thenReturn(assistantContent);
 
         Message result =
-                chatService.sendMessage(conversationId, userContent);
+                chatService.sendMessage(conversationId, userContent, CUSTOMER_ID);
 
         assertThat(result).isNotNull();
         assertThat(result.getRole()).isEqualTo(MessageRole.ASSISTANT);
@@ -208,11 +208,11 @@ class ChatServiceTest {
 
     @Test
     void sendMessage_shouldThrowWhenConversationDoesNotExist() {
-        when(conversationRepository.findById(conversationId))
+        when(conversationRepository.findByIdAndCustomerId(conversationId, CUSTOMER_ID))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                chatService.sendMessage(conversationId, "Hello"))
+                chatService.sendMessage(conversationId, "Hello", CUSTOMER_ID))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Conversation not found");
 
@@ -252,7 +252,7 @@ class ChatServiceTest {
         String userContent = "Tell me about Java.";
         String assistantContent = "Java is a programming language.";
 
-        when(conversationRepository.findById(conversationId))
+        when(conversationRepository.findByIdAndCustomerId(conversationId, CUSTOMER_ID))
                 .thenReturn(Optional.of(conversation));
 
         when(messageRepository.findByConversationIdOrderByCreatedAt(
@@ -281,9 +281,7 @@ class ChatServiceTest {
                         "a programming language."));
 
         Flux<String> result =
-                chatService.streamMessage(
-                        conversationId,
-                        userContent);
+                chatService.streamMessage(conversationId, userContent, CUSTOMER_ID);
 
         StepVerifier.create(result)
                 .expectNext("Java ")
@@ -315,13 +313,11 @@ class ChatServiceTest {
 
     @Test
     void streamMessage_shouldThrowWhenConversationDoesNotExist() {
-        when(conversationRepository.findById(conversationId))
+        when(conversationRepository.findByIdAndCustomerId(conversationId, CUSTOMER_ID))
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                chatService.streamMessage(
-                        conversationId,
-                        "Hello"))
+                chatService.streamMessage(conversationId, "Hello", CUSTOMER_ID))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Conversation not found");
 
