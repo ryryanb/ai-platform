@@ -1,3 +1,4 @@
+
 import {
   Conversation,
   ConversationResponse,
@@ -6,7 +7,7 @@ import {
 } from '../types/chat';
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080/api';
+  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8089/api';
 
 interface BackendMessage {
   id: string;
@@ -15,6 +16,22 @@ interface BackendMessage {
   createdAt: string;
 }
 
+/**
+ * Replace this implementation with the actual token accessor
+ * from your existing authentication context/store.
+ */
+const getAccessToken = (): string | null => {
+  return localStorage.getItem('accessToken');
+};
+
+const getAuthHeaders = (): HeadersInit => {
+  const token = getAccessToken();
+
+  return token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+};
+
 const request = async <T>(
   endpoint: string,
   options?: RequestInit,
@@ -22,9 +39,10 @@ const request = async <T>(
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
-      ...(options?.body
+      ...(options?.body !== undefined
         ? { 'Content-Type': 'text/plain' }
         : {}),
+      ...getAuthHeaders(),
       ...options?.headers,
     },
   });
@@ -99,57 +117,50 @@ export const chatApi = {
     return normalizeMessage(message);
   },
 
- streamMessage: async (
-  conversationId: string,
-  userMessage: string,
-  onChunk: (chunk: string) => void,
-): Promise<void> => {
-  const response = await fetch(
-    `${API_BASE_URL}/conversations/${conversationId}/messages/stream`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain',
+  streamMessage: async (
+    conversationId: string,
+    userMessage: string,
+    onChunk: (chunk: string) => void,
+  ): Promise<void> => {
+    const response = await fetch(
+      `${API_BASE_URL}/conversations/${conversationId}/messages/stream`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+          ...getAuthHeaders(),
+        },
+        body: userMessage,
       },
-      body: userMessage,
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-
-    throw new Error(
-      errorText || `Request failed with status ${response.status}`,
     );
-  }
 
-  if (!response.body) {
-    throw new Error('Streaming response body is unavailable.');
-  }
+    if (!response.ok) {
+      const errorText = await response.text();
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { value, done } = await reader.read();
-
-    if (done) {
-      break;
+      throw new Error(
+        errorText || `Request failed with status ${response.status}`,
+      );
     }
 
-    const chunk = decoder.decode(value, {
-      stream: true,
-    });
-
-    if (chunk) {
-      onChunk(chunk);
+    if (!response.body) {
+      throw new Error('Streaming response body is unavailable.');
     }
-  }
 
-  const finalChunk = decoder.decode();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-  if (finalChunk) {
-    onChunk(finalChunk);
-  }
-},
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+
+      if (chunk) onChunk(chunk);
+    }
+
+    const finalChunk = decoder.decode();
+
+    if (finalChunk) onChunk(finalChunk);
+  },
 };
