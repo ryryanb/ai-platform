@@ -130,7 +130,7 @@ class ChatControllerTest {
 
                 when(chatService.sendMessage(
                                 conversationId,
-                                "Hello", "customer-test"))
+                                "Hello", "customer-test", "Bearer token"))
                                 .thenReturn(response);
 
                 mockMvc.perform(
