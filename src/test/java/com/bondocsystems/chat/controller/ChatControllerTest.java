@@ -171,7 +171,7 @@ class ChatControllerTest {
 
                 when(chatService.sendMessage(
                                 conversationId,
-                                "Hello", "customer-test"))
+                                "Hello", "customer-test", "Bearer token"))
                                 .thenThrow(new ResourceNotFoundException(
                                                 "Conversation not found"));
 
