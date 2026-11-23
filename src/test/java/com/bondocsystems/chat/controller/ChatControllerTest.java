@@ -1,6 +1,7 @@
 package com.bondocsystems.chat.controller;
 
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,10 +14,13 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.bondocsystems.chat.config.SecurityConfig;
 import com.bondocsystems.chat.exception.ResourceNotFoundException;
 import com.bondocsystems.chat.model.Conversation;
 import com.bondocsystems.chat.model.Message;
@@ -26,168 +30,184 @@ import com.bondocsystems.chat.service.ChatService;
 import reactor.core.publisher.Flux;
 
 @WebMvcTest(ChatController.class)
+@Import(SecurityConfig.class)
 class ChatControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @MockitoBean
-private ChatService chatService;
+        @MockitoBean
+        private ChatService chatService;
 
-    @Test
-    void createConversation_shouldReturnCreated() throws Exception {
-        UUID id = UUID.randomUUID();
+        @MockitoBean
+        private JwtDecoder jwtDecoder;
 
-        Conversation conversation = new Conversation();
-        conversation.setId(id);
-        conversation.setCreatedAt(Instant.now());
-        conversation.setUpdatedAt(Instant.now());
+        @Test
+        void getConversations_shouldRequireAuthentication() throws Exception {
+                mockMvc.perform(get("/api/conversations"))
+                                .andExpect(status().isUnauthorized());
+        }
 
-        when(chatService.createConversation())
-                .thenReturn(conversation);
+        @Test
+        void createConversation_shouldReturnCreated() throws Exception {
+                UUID id = UUID.randomUUID();
 
-        mockMvc.perform(post("/api/conversations"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value(id.toString()));
-    }
+                Conversation conversation = new Conversation();
+                conversation.setId(id);
+                conversation.setCreatedAt(Instant.now());
+                conversation.setUpdatedAt(Instant.now());
 
-    @Test
-    void getConversations_shouldReturnConversations()
-            throws Exception {
+                when(chatService.createConversation("customer-test"))
+                                .thenReturn(conversation);
 
-        Conversation conversation = new Conversation();
+                mockMvc.perform(post("/api/conversations")
+                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isCreated())
+                                .andExpect(jsonPath("$.id").value(id.toString()));
+        }
 
-        UUID id = UUID.randomUUID();
+        @Test
+        void getConversations_shouldReturnConversations()
+                        throws Exception {
 
-        conversation.setId(id);
-        conversation.setCreatedAt(Instant.now());
-        conversation.setUpdatedAt(Instant.now());
+                Conversation conversation = new Conversation();
 
-        when(chatService.getConversations())
-                .thenReturn(List.of(conversation));
+                UUID id = UUID.randomUUID();
 
-        mockMvc.perform(get("/api/conversations"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id")
-                        .value(id.toString()));
-    }
+                conversation.setId(id);
+                conversation.setCreatedAt(Instant.now());
+                conversation.setUpdatedAt(Instant.now());
 
-    @Test
-    void getConversationHistory_shouldReturnMessages()
-            throws Exception {
+                when(chatService.getConversations("customer-test"))
+                                .thenReturn(List.of(conversation));
 
-        UUID conversationId = UUID.randomUUID();
+                mockMvc.perform(get("/api/conversations")
+                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].id")
+                                                .value(id.toString()));
+        }
 
-        Message message = new Message();
+        @Test
+        void getConversationHistory_shouldReturnMessages()
+                        throws Exception {
 
-        message.setId(UUID.randomUUID());
-        message.setRole(MessageRole.USER);
-        message.setContent("Hello");
-        message.setCreatedAt(Instant.now());
+                UUID conversationId = UUID.randomUUID();
 
-        when(chatService.getConversationHistory(conversationId))
-                .thenReturn(List.of(message));
+                Message message = new Message();
 
-        mockMvc.perform(
-                get("/api/conversations/{conversationId}/messages",
-                        conversationId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].content")
-                        .value("Hello"))
-                .andExpect(jsonPath("$[0].role")
-                        .value("USER"));
-    }
+                message.setId(UUID.randomUUID());
+                message.setRole(MessageRole.USER);
+                message.setContent("Hello");
+                message.setCreatedAt(Instant.now());
 
-    @Test
-    void sendMessage_shouldReturnAssistantMessage()
-            throws Exception {
+                when(chatService.getConversationHistory(conversationId, "customer-test"))
+                                .thenReturn(List.of(message));
 
-        UUID conversationId = UUID.randomUUID();
+                mockMvc.perform(
+                                get("/api/conversations/{conversationId}/messages",
+                                                conversationId)
+                                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$[0].content")
+                                                .value("Hello"))
+                                .andExpect(jsonPath("$[0].role")
+                                                .value("USER"));
+        }
 
-        Message response = new Message();
+        @Test
+        void sendMessage_shouldReturnAssistantMessage()
+                        throws Exception {
 
-        response.setId(UUID.randomUUID());
-        response.setRole(MessageRole.ASSISTANT);
-        response.setContent("Hello! How can I help?");
-        response.setCreatedAt(Instant.now());
+                UUID conversationId = UUID.randomUUID();
 
-        when(chatService.sendMessage(
-                conversationId,
-                "Hello"))
-                .thenReturn(response);
+                Message response = new Message();
 
-        mockMvc.perform(
-                post("/api/conversations/{conversationId}/messages",
-                        conversationId)
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .content("Hello"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.role")
-                        .value("ASSISTANT"))
-                .andExpect(jsonPath("$.content")
-                        .value("Hello! How can I help?"));
-    }
+                response.setId(UUID.randomUUID());
+                response.setRole(MessageRole.ASSISTANT);
+                response.setContent("Hello! How can I help?");
+                response.setCreatedAt(Instant.now());
 
-    @Test
-    void getConversationHistory_shouldReturnNotFound()
-            throws Exception {
+                when(chatService.sendMessage(
+                                conversationId,
+                                "Hello", "customer-test"))
+                                .thenReturn(response);
 
-        UUID conversationId = UUID.randomUUID();
+                mockMvc.perform(
+                                post("/api/conversations/{conversationId}/messages",
+                                                conversationId)
+                                                .contentType(MediaType.TEXT_PLAIN)
+                                                .content("Hello")
+                                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.role")
+                                                .value("ASSISTANT"))
+                                .andExpect(jsonPath("$.content")
+                                                .value("Hello! How can I help?"));
+        }
 
-        when(chatService.getConversationHistory(conversationId))
-                .thenThrow(new ResourceNotFoundException(
-                        "Conversation not found"));
+        @Test
+        void getConversationHistory_shouldReturnNotFound()
+                        throws Exception {
 
-        mockMvc.perform(
-                get("/api/conversations/{conversationId}/messages",
-                        conversationId))
-                .andExpect(status().isNotFound());
-    }
+                UUID conversationId = UUID.randomUUID();
 
-    @Test
-    void sendMessage_shouldReturnNotFound()
-            throws Exception {
+                when(chatService.getConversationHistory(conversationId, "customer-test"))
+                                .thenThrow(new ResourceNotFoundException(
+                                                "Conversation not found"));
 
-        UUID conversationId = UUID.randomUUID();
+                mockMvc.perform(
+                                get("/api/conversations/{conversationId}/messages",
+                                                conversationId)
+                                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isNotFound());
+        }
 
-        when(chatService.sendMessage(
-                conversationId,
-                "Hello"))
-                .thenThrow(new ResourceNotFoundException(
-                        "Conversation not found"));
+        @Test
+        void sendMessage_shouldReturnNotFound()
+                        throws Exception {
 
-        mockMvc.perform(
-                post("/api/conversations/{conversationId}/messages",
-                        conversationId)
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .content("Hello"))
-                .andExpect(status().isNotFound());
-    }
+                UUID conversationId = UUID.randomUUID();
 
-    @Test
-    void streamMessage_shouldReturnStreamingResponse()
-            throws Exception {
+                when(chatService.sendMessage(
+                                conversationId,
+                                "Hello", "customer-test"))
+                                .thenThrow(new ResourceNotFoundException(
+                                                "Conversation not found"));
 
-        UUID conversationId = UUID.randomUUID();
+                mockMvc.perform(
+                                post("/api/conversations/{conversationId}/messages",
+                                                conversationId)
+                                                .contentType(MediaType.TEXT_PLAIN)
+                                                .content("Hello")
+                                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isNotFound());
+        }
 
-        when(chatService.streamMessage(
-                conversationId,
-                "Hello"))
-                .thenReturn(
-                        Flux.just(
-                                "Hello ",
-                                "there!"));
+        @Test
+        void streamMessage_shouldReturnStreamingResponse()
+                        throws Exception {
 
-        mockMvc.perform(
-                post("/api/conversations/{conversationId}/messages/stream",
-                        conversationId)
-                        .contentType(MediaType.TEXT_PLAIN)
-                        .content("Hello"))
-                .andExpect(status().isOk())
-                .andExpect(
-                        org.springframework.test.web.servlet.result
-                                .MockMvcResultMatchers
-                                .content()
-                                .string("Hello there!"));
-    }
+                UUID conversationId = UUID.randomUUID();
+
+                when(chatService.streamMessage(
+                                conversationId,
+                                "Hello", "customer-test"))
+                                .thenReturn(
+                                                Flux.just(
+                                                                "Hello ",
+                                                                "there!"));
+
+                mockMvc.perform(
+                                post("/api/conversations/{conversationId}/messages/stream",
+                                                conversationId)
+                                                .contentType(MediaType.TEXT_PLAIN)
+                                                .content("Hello")
+                                                .with(jwt().jwt(token -> token.claim("customerId", "customer-test"))))
+                                .andExpect(status().isOk())
+                                .andExpect(
+                                                org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                                                                .content()
+                                                                .string("Hello there!"));
+        }
 }
