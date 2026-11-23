@@ -30,7 +30,7 @@ class ChatServiceCustomerIsolationTest {
         conversations = mock(ConversationRepository.class);
         messages = mock(MessageRepository.class);
         chatClient = mock(ChatClient.class);
-        service = new ChatService(chatClient, conversations, messages, mock(PromptEngineeringService.class));
+        service = new ChatService(chatClient, conversations, messages, mock(PromptEngineeringService.class), mock(FinancialContextClient.class));
     }
 
     @Test
