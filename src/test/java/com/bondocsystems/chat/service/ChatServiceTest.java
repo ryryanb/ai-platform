@@ -263,7 +263,7 @@ class ChatServiceTest {
                 .thenReturn(List.of(
                         createMessage(MessageRole.USER, userContent)));
 
-        when(promptEngineeringService.buildConversationPrompt(any()))
+        when(promptEngineeringService.buildConversationPrompt(any(), any()))
                 .thenReturn(prompt);
 
         ChatClient.ChatClientRequestSpec promptSpec =
@@ -310,7 +310,7 @@ class ChatServiceTest {
                 .isEqualTo(assistantContent);
 
         verify(promptEngineeringService)
-                .buildConversationPrompt(any());
+                .buildConversationPrompt(any(), any());
         verify(chatClient).prompt(prompt);
     }
 
