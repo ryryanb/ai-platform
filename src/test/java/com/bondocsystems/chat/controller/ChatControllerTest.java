@@ -192,7 +192,7 @@ class ChatControllerTest {
 
                 when(chatService.streamMessage(
                                 conversationId,
-                                "Hello", "customer-test"))
+                                "Hello", "customer-test", "Bearer token"))
                                 .thenReturn(
                                                 Flux.just(
                                                                 "Hello ",
