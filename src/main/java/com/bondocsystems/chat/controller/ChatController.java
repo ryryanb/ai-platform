@@ -54,7 +54,7 @@ public class ChatController {
             @PathVariable UUID conversationId,
             @RequestBody String message,
             @AuthenticationPrincipal Jwt jwt) {
-        return ResponseEntity.ok(chatService.sendMessage(conversationId, message, customerId(jwt)));
+        return ResponseEntity.ok(chatService.sendMessage(conversationId, message, customerId(jwt), bearerToken(jwt)));
     }
 
     @GetMapping("/{conversationId}/messages")
@@ -74,7 +74,14 @@ public class ChatController {
             @PathVariable UUID conversationId,
             @RequestBody String message,
             @AuthenticationPrincipal Jwt jwt) {
-        return chatService.streamMessage(conversationId, message, customerId(jwt));
+        return chatService.streamMessage(conversationId, message, customerId(jwt), bearerToken(jwt));
+    }
+
+    private String bearerToken(Jwt jwt) {
+        if (jwt == null || jwt.getTokenValue() == null || jwt.getTokenValue().isBlank()) {
+            throw new AccessDeniedException("A customer access token is required");
+        }
+        return "Bearer " + jwt.getTokenValue();
     }
 
     private String customerId(Jwt jwt) {

@@ -130,7 +130,7 @@ class ChatControllerTest {
 
                 when(chatService.sendMessage(
                                 conversationId,
-                                "Hello", "customer-test"))
+                                "Hello", "customer-test", "Bearer token"))
                                 .thenReturn(response);
 
                 mockMvc.perform(
@@ -171,7 +171,7 @@ class ChatControllerTest {
 
                 when(chatService.sendMessage(
                                 conversationId,
-                                "Hello", "customer-test"))
+                                "Hello", "customer-test", "Bearer token"))
                                 .thenThrow(new ResourceNotFoundException(
                                                 "Conversation not found"));
 
@@ -192,7 +192,7 @@ class ChatControllerTest {
 
                 when(chatService.streamMessage(
                                 conversationId,
-                                "Hello", "customer-test"))
+                                "Hello", "customer-test", "Bearer token"))
                                 .thenReturn(
                                                 Flux.just(
                                                                 "Hello ",

@@ -53,6 +53,9 @@ class ChatServiceTest {
     private PromptEngineeringService promptEngineeringService;
 
     @Mock
+    private FinancialContextClient financialContextClient;
+
+    @Mock
     private Prompt prompt;
 
     @InjectMocks
@@ -175,7 +178,7 @@ class ChatServiceTest {
                     return message;
                 });
 
-        when(promptEngineeringService.buildConversationPrompt(any()))
+        when(promptEngineeringService.buildConversationPrompt(any(), any()))
                 .thenReturn(prompt);
 
         ChatClient.ChatClientRequestSpec promptSpec =
@@ -191,7 +194,7 @@ class ChatServiceTest {
         when(callResponseSpec.content()).thenReturn(assistantContent);
 
         Message result =
-                chatService.sendMessage(conversationId, userContent, CUSTOMER_ID);
+                chatService.sendMessage(conversationId, userContent, CUSTOMER_ID, "Bearer test-token");
 
         assertThat(result).isNotNull();
         assertThat(result.getRole()).isEqualTo(MessageRole.ASSISTANT);
@@ -200,7 +203,7 @@ class ChatServiceTest {
 
         verify(messageRepository, times(2)).save(any(Message.class));
         verify(promptEngineeringService)
-                .buildConversationPrompt(any());
+                .buildConversationPrompt(any(), any());
         verify(chatClient).prompt(prompt);
         verify(promptSpec).call();
         verify(callResponseSpec).content();
@@ -212,7 +215,7 @@ class ChatServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                chatService.sendMessage(conversationId, "Hello", CUSTOMER_ID))
+                chatService.sendMessage(conversationId, "Hello", CUSTOMER_ID, "Bearer test-token"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Conversation not found");
 
@@ -260,7 +263,7 @@ class ChatServiceTest {
                 .thenReturn(List.of(
                         createMessage(MessageRole.USER, userContent)));
 
-        when(promptEngineeringService.buildConversationPrompt(any()))
+        when(promptEngineeringService.buildConversationPrompt(any(), any()))
                 .thenReturn(prompt);
 
         ChatClient.ChatClientRequestSpec promptSpec =
@@ -281,7 +284,7 @@ class ChatServiceTest {
                         "a programming language."));
 
         Flux<String> result =
-                chatService.streamMessage(conversationId, userContent, CUSTOMER_ID);
+                chatService.streamMessage(conversationId, userContent, CUSTOMER_ID, "Bearer test-token");
 
         StepVerifier.create(result)
                 .expectNext("Java ")
@@ -307,7 +310,7 @@ class ChatServiceTest {
                 .isEqualTo(assistantContent);
 
         verify(promptEngineeringService)
-                .buildConversationPrompt(any());
+                .buildConversationPrompt(any(), any());
         verify(chatClient).prompt(prompt);
     }
 
@@ -317,7 +320,7 @@ class ChatServiceTest {
                 .thenReturn(Optional.empty());
 
         assertThatThrownBy(() ->
-                chatService.streamMessage(conversationId, "Hello", CUSTOMER_ID))
+                chatService.streamMessage(conversationId, "Hello", CUSTOMER_ID, "Bearer test-token"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Conversation not found");
 

@@ -31,16 +31,19 @@ public class ChatService {
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
     private final PromptEngineeringService promptEngineeringService;
+    private final FinancialContextClient financialContextClient;
 
     public ChatService(
             ChatClient chatClient,
             ConversationRepository conversationRepository,
             MessageRepository messageRepository,
-            PromptEngineeringService promptEngineeringService) {
+            PromptEngineeringService promptEngineeringService,
+            FinancialContextClient financialContextClient) {
         this.chatClient = chatClient;
         this.conversationRepository = conversationRepository;
         this.messageRepository = messageRepository;
         this.promptEngineeringService = promptEngineeringService;
+        this.financialContextClient = financialContextClient;
     }
 
     public String chat(String message) {
@@ -55,7 +58,7 @@ public class ChatService {
     }
 
     @Transactional
-    public Message sendMessage(UUID conversationId, String message, String customerId) {
+    public Message sendMessage(UUID conversationId, String message, String customerId, String bearerToken) {
         Conversation conversation = getOwnedConversation(conversationId, customerId);
         Message userMessage = createMessage(conversation, MessageRole.USER, message);
         messageRepository.save(userMessage);
@@ -67,7 +70,8 @@ public class ChatService {
         }
 
         List<Message> history = messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
-        Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
+        String financialContext = financialContextClient.getContext(bearerToken);
+        Prompt prompt = promptEngineeringService.buildConversationPrompt(history, financialContext);
         String aiResponse = chatClient.prompt(prompt).call().content();
 
         Message assistantMessage = createMessage(conversation, MessageRole.ASSISTANT, aiResponse);
@@ -101,7 +105,7 @@ public class ChatService {
         return conversationRepository.findAllByCustomerIdOrderByUpdatedAtDesc(customerId);
     }
 
-    public Flux<String> streamMessage(UUID conversationId, String message, String customerId) {
+    public Flux<String> streamMessage(UUID conversationId, String message, String customerId, String bearerToken) {
         Conversation conversation = getOwnedConversation(conversationId, customerId);
         messageRepository.save(createMessage(conversation, MessageRole.USER, message));
 
@@ -112,7 +116,8 @@ public class ChatService {
         }
 
         List<Message> history = messageRepository.findByConversationIdOrderByCreatedAt(conversationId);
-        Prompt prompt = promptEngineeringService.buildConversationPrompt(history);
+        String financialContext = financialContextClient.getContext(bearerToken);
+        Prompt prompt = promptEngineeringService.buildConversationPrompt(history, financialContext);
         StringBuilder responseBuilder = new StringBuilder();
 
         return chatClient.prompt(prompt).stream().content()
